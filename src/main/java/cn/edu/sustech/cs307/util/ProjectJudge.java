@@ -22,12 +22,14 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public final class ProjectJudge {
+    // load benchmark data
     private static final File searchCourse1Dir = new File("./data/searchCourse1/");
     private static final File enrollCourse1Dir = new File("./data/enrollCourse1/");
     private static final File courseTable2Dir = new File("./data/courseTable2/");
     private static final File searchCourse2Dir = new File("./data/searchCourse2/");
     private static final File enrollCourse2Dir = new File("./data/enrollCourse2/");
 
+    // connect implement class
     private final ServiceFactory serviceFactory = Config.getServiceFactory();
     private final CourseService courseService = serviceFactory.createService(CourseService.class);
     private final DepartmentService departmentService = serviceFactory.createService(DepartmentService.class);
@@ -38,6 +40,7 @@ public final class ProjectJudge {
 
     private final List<CourseSearchEntry> errorCourseList = List.of(new CourseSearchEntry());
     private final CourseTable errorTable = new CourseTable();
+
 
     public EvalResult testSearchCourses(File searchCourseDir) {
         EvalResult result = new EvalResult();
@@ -190,7 +193,7 @@ public final class ProjectJudge {
                 || !userService.getAllUsers().isEmpty()) {
             System.out.println("Database is not empty! Trying to truncate all your tables.");
             try {
-                courseService.getAllCourses().parallelStream().forEach(it -> courseService.removeCourse(it.id));
+
                 departmentService.getAllDepartments().parallelStream()
                         .forEach(it -> departmentService.removeDepartment(it.id));
                 semesterService.getAllSemesters().parallelStream().forEach(it -> semesterService.removeSemester(it.id));
@@ -235,37 +238,45 @@ public final class ProjectJudge {
         importer.importMajorElectiveCourses(majorElectiveCourses);
         endTimeNs = System.nanoTime();
         System.out.printf("Import time usage: %.2fs\n", (endTimeNs - startTimeNs) / 1000000000.0);
+
         // 2. Test searchCourse1
         EvalResult searchCourse1 = testSearchCourses(searchCourse1Dir);
         System.out.println("Test search course 1: " + searchCourse1.passCount.get());
         System.out.printf("Test search course 1 time: %.2fs\n", searchCourse1.elapsedTimeNs.get() / 1000000000.0);
+
         // 3. Test enrollCourse1
         EnrollEvalResult enrollCourse1 = testEnrollCourses(enrollCourse1Dir);
         System.out.println("Test enroll course 1: " + enrollCourse1.passCount.get());
         System.out.printf("Test enroll course 1 time: %.2fs\n", enrollCourse1.elapsedTimeNs.get() / 1000000000.0);
+
         // 4. Drop all success course
         EvalResult dropEnrolledCourse1 = testDropEnrolledCourses(enrollCourse1);
         System.out.println("Test drop enrolled course 1: " + dropEnrolledCourse1.passCount.get());
         System.out.printf("Test drop enrolled course 1 time: %.2fs\n",
                 dropEnrolledCourse1.elapsedTimeNs.get() / 1000000000.0);
+
         // 5. Import studentCourses.json
         startTimeNs = System.nanoTime();
         System.out.println("Import student courses");
         importer.importStudentCourses(studentCourses);
         endTimeNs = System.nanoTime();
         System.out.printf("Import student courses time: %.2fs\n", (endTimeNs - startTimeNs) / 1000000000.0);
+
         // 6. Try to drop graded course, test if throw IllegalStateException
         EvalResult dropCourse = testDropCourses(studentCourses);
         System.out.println("Test drop course: " + dropCourse.passCount.get());
         System.out.printf("Test drop course time: %.2fs\n", dropCourse.elapsedTimeNs.get() / 1000000000.0);
+
         // 7. Test courseTable2
         EvalResult courseTables2 = testCourseTables(courseTable2Dir);
         System.out.println("Test course table 2: " + courseTables2.passCount.get());
         System.out.printf("Test course table 2 time: %.2fs\n", courseTables2.elapsedTimeNs.get() / 1000000000.0);
+
         // 8. Test searchCourse2
         EvalResult searchCourse2 = testSearchCourses(searchCourse2Dir);
         System.out.println("Test search course 2: " + searchCourse2.passCount.get());
         System.out.printf("Test search course 2 time: %.2fs\n", searchCourse2.elapsedTimeNs.get() / 1000000000.0);
+
         // 9. Test enrollCourse2
         EnrollEvalResult enrollCourse2 = testEnrollCourses(enrollCourse2Dir);
         System.out.println("Test enroll course 2: " + enrollCourse2.passCount.get());

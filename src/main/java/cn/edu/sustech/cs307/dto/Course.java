@@ -2,9 +2,6 @@ package cn.edu.sustech.cs307.dto;
 
 import java.util.Objects;
 
-/**
- * todo: 加注释
- */
 public class Course {
     public enum CourseGrading {
         PASS_OR_FAIL, HUNDRED_MARK_SCORE
