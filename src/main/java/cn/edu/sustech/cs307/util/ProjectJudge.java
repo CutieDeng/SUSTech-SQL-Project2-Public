@@ -7,6 +7,7 @@ import cn.edu.sustech.cs307.dto.prerequisite.Prerequisite;
 import cn.edu.sustech.cs307.factory.ServiceFactory;
 import cn.edu.sustech.cs307.service.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -296,6 +297,11 @@ public final class ProjectJudge {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Test
+    public void test01() {
+//        readValueFromFile();
     }
 
     private static <T> T readValueFromFile(String fileName, Class<T> tClass) {

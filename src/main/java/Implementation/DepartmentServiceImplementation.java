@@ -41,7 +41,8 @@ public class DepartmentServiceImplementation implements DepartmentService {
     @Override
     public void removeDepartment(int departmentId) {
         try (Connection connection = SQLDataSource.getInstance().getSQLConnection();
-             PreparedStatement stmt = connection.prepareStatement("select * from remove_Department(?)")// done,todo no error given
+             PreparedStatement stmt = connection.prepareStatement("select * from remove_Department(?)")
+             // done,todo: no error given
         ) {
             stmt.setInt(1, departmentId);
             stmt.execute();

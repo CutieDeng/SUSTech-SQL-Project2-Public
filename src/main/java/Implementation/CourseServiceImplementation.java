@@ -19,6 +19,7 @@ import java.sql.Date;
 import java.time.DayOfWeek;
 import java.util.*;
 
+@SuppressWarnings("all")
 @ParametersAreNonnullByDefault
 public class CourseServiceImplementation implements CourseService {
 
@@ -29,10 +30,10 @@ public class CourseServiceImplementation implements CourseService {
                           int credit, int classHour,
                           Course.CourseGrading grading,
                           @Nullable Prerequisite coursePrerequisite) {
-
         courseId = courseId.replace("-",replace);
         try (Connection connection = SQLDataSource.getInstance().getSQLConnection();
-             PreparedStatement stmt = connection.prepareStatement("select add_Course(?,?,?,?,?)")//todo prerequisite
+             PreparedStatement stmt = connection.prepareStatement("select add_Course(?,?,?,?,?)")
+             //todo: prerequisite.
         ) {
             stmt.setString(1, courseId);
             stmt.setString(2, courseName);
