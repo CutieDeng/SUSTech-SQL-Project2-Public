@@ -3,6 +3,7 @@ package cn.edu.sustech.cs307.dto.prerequisite;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.function.IntFunction;
 
 import static org.junit.jupiter.api.Assertions.*;
 

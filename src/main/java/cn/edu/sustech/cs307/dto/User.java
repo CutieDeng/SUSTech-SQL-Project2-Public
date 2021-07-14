@@ -15,10 +15,7 @@ public abstract class User {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
+        if (!Objects.equals(this, o)) {
             return false;
         }
         User user = (User) o;
