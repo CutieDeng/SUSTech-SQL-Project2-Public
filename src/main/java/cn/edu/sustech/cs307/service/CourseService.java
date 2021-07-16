@@ -9,10 +9,17 @@ import java.time.DayOfWeek;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * 提供课程服务的接口，里面包括如下方法：<br>
+ * {@link CourseService#addCourse(String, String, int, int, Course.CourseGrading, Prerequisite)} 添加一门课程。
+ *
+ */
 @ParametersAreNonnullByDefault
 public interface CourseService {
     /**
-     * Add one course according to following parameters.
+     * 根据传入的参数添加一门课程。<br>
+     * 如果某些参数是非法的，请丢出错误 {@link cn.edu.sustech.cs307.exception.IntegrityViolationException}。<br>
+     * Add one course according to following parameters. <br>
      * If some of parameters are invalid, throw {@link cn.edu.sustech.cs307.exception.IntegrityViolationException}
      *
      * @param courseId represents the id of course. For example, CS307, CS309
@@ -26,6 +33,8 @@ public interface CourseService {
                    Course.CourseGrading grading, @Nullable Prerequisite prerequisite);
 
     /**
+     * 根据传入参数，添加一个课段。<br>
+     * 如果有非法的参数，丢出错误 {@link cn.edu.sustech.cs307.exception.IntegrityViolationException}. <br>
      * Add one course section according to following parameters:
      * If some of parameters are invalid, throw {@link cn.edu.sustech.cs307.exception.IntegrityViolationException}
      *
@@ -39,27 +48,26 @@ public interface CourseService {
 
 
     /**
+     * 添加一个课段的具体课程安排。<br>
+     * 如果有非法的传入参数，丢出错误 {@link cn.edu.sustech.cs307.exception.IntegrityViolationException}. <br>
      * Add one course section class according to following parameters:
      * If some of parameters are invalid, throw {@link cn.edu.sustech.cs307.exception.IntegrityViolationException}
-
-
-
-
-
-
-     * @param sectionId
-     * @param instructorId
-     * @param dayOfWeek
-     * @param weekList
-     * @param classStart
-     * @param classEnd
-     * @param location
+     * @param sectionId 课段 id.
+     * @param instructorId 教授 id.
+     * @param dayOfWeek 星期几的课程。
+     * @param weekList 课程活跃的周目情况。
+     * @param classStart 当天课程开始的具体时间。
+     * @param classEnd 当天课程结束的具体时间。
+     * @param location 该课的授课地点。
      * @return the CourseSectionClass id of new inserted line.
      */
     int addCourseSectionClass(int sectionId, int instructorId, DayOfWeek dayOfWeek, Set<Short> weekList,
                               short classStart, short classEnd, String location);
 
+    /**
+     * 获取所有课程信息。
+     * @return 一个列表，存储所有课程。
+     */
     List<Course> getAllCourses();
-
 
 }

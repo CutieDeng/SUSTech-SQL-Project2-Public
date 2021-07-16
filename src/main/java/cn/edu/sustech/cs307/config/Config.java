@@ -3,6 +3,8 @@ package cn.edu.sustech.cs307.config;
 import cn.edu.sustech.cs307.factory.ServiceFactory;
 
 import java.io.*;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
@@ -13,6 +15,9 @@ import java.util.logging.Logger;
  * {@link Config#getJdbcUrl()} 获取项目的 jdbcUrl.<br>
  * {@link Config#getSQLUsername()} 获取我们配置信息中的账号名称。<br>
  * {@link Config#getSQLPassword()} 获取我们配置信息中的用户密码。<br>
+ * {@link Config#getServiceFactory()} 获得提供服务的工厂类实例。值得注意的是，
+ * 你可以通过描述一个 newInstance() 的静态方法，来获得它的合法实例。(如果你在重写该方法的时候，并没有获得一个合法的实例，那么
+ * 这个特殊方法会被忽略。)
  */
 public final class Config {
     /**
@@ -113,19 +118,39 @@ public final class Config {
         return result;
     }
 
+
     /**
-     * @return todo: fix it.
+     * 这是一个静态的访问器方法，将会尝试调用属性中的 serviceFactory key 的 value, <br>
+     * 并同时获取它的默认构造器，并调用它的实例。<br>
+     * 这是一种非常糟糕的方法实现方式。<br>
+     * 因此我尝试给出另一种实现方式，在这个类中如果有出现 getInstance() 的静态方法，
+     * 我会优先调用这个方法；否则，调用默认构造器的构造函数。<br>
+     * 我希望实现相关内容的编程者，都能够留意这个细节，并尽可能地保持单例的习惯，而不是
+     * 贸然、非法地通过反射轻易构造新的实例。<br>
+     * 感谢配合。<br>
+     * 除此之外，该方法会轻易地抛出一个 RuntimeException 当它遇到任何异常的时候。
+     * @return 返回 properties 中的 Service Factory 类。
+     * @throws RuntimeException 遇到任何异常，都将捕获并转化成运行时异常。
      */
     public static ServiceFactory getServiceFactory() {
         try {
-            return (ServiceFactory) Class.forName(properties.getProperty("serviceFactory"))
-                    .getDeclaredConstructor().newInstance();
-        } catch (Exception e) {
+            Class<?> serviceFactory = Class.forName(properties.getProperty("serviceFactory"));
+            Method getInstance = null;
+            try {
+                getInstance = serviceFactory.getMethod("getInstance");
+            } catch (NoSuchMethodException ignore) {
+            }
+            if (getInstance != null) {
+                Object result = getInstance.invoke(serviceFactory);
+                if (result instanceof ServiceFactory) {
+                    return (ServiceFactory) result;
+                }
+            }
+            return (ServiceFactory) serviceFactory.
+                    getDeclaredConstructor().newInstance();
+        } catch (ClassNotFoundException | InvocationTargetException | IllegalAccessException | NoSuchMethodException | InstantiationException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    public static void main(String[] args) {
     }
 
     /**
@@ -190,5 +215,13 @@ public final class Config {
      */
     public static String getSQLPassword() {
         return getProperty("password");
+    }
+
+    /**
+     * 从文件中获取连接池的最大容量。
+     * @return 连接池最大容量。
+     */
+    public static String getMaximumPoolSize() {
+        return getProperty("maximumPoolSize");
     }
 }
