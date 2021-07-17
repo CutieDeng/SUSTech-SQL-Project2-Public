@@ -8,7 +8,10 @@ import java.util.List;
 
 /**
  * Semester Service 学期服务接口<br>
- *
+ * 接口提供三个方法：<br>
+ * {@link #addSemester(String 学期名, Date 学期开始日期, Date 学期结束日期)} 添加一个新学期。<br>
+ * {@link #removeSemester(int 移除的学期 ID)} 移除一个学期。<br>
+ * {@link #getAllSemesters()} 获得所有学期的列表。
  */
 @ParametersAreNonnullByDefault
 public interface SemesterService {
