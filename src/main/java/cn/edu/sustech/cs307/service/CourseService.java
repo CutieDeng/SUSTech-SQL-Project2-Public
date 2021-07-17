@@ -11,8 +11,14 @@ import java.util.Set;
 
 /**
  * 提供课程服务的接口，里面包括如下方法：<br>
- * {@link CourseService#addCourse(String, String, int, int, Course.CourseGrading, Prerequisite)} 添加一门课程。
- *
+ * {@link CourseService#addCourse(String, String, int, int, Course.CourseGrading, Prerequisite)} 添加一门课程。<br>
+ * {@link CourseService#addCourseSection(String, int, String, int)} 添加一个课段。<br>
+ * {@link CourseService#addCourseSectionClass(int, int, DayOfWeek, Set, short, short, String)} 添加一个课时。<br>
+ * {@link CourseService#getAllCourses()} 获取所有课程，以列表呈现。<br>
+ * 消歧义：<br>
+ * 课程应当指的是某种类型的课程，课程大类。<br>
+ * 课段指的是一门具体的课程，也是学生选择课程的最小单位。<br>
+ * 课时则是课段的具体描述，也是学生进行课程的时间安排。<br>
  */
 @ParametersAreNonnullByDefault
 public interface CourseService {
