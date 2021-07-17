@@ -31,7 +31,7 @@ public class StudentServiceImplementation implements StudentService {
     final String replace = "X";
     final String original = "-";
 
-    // to do
+
     @Override
     public List<CourseSearchEntry> searchCourse(int studentId, int semesterId,
                                                 @Nullable String searchCid,
@@ -44,8 +44,14 @@ public class StudentServiceImplementation implements StudentService {
                                                 boolean ignoreFull, boolean ignoreConflict,
                                                 boolean ignorePassed, boolean ignoreMissingPrerequisites,
                                                 int pageSize, int pageIndex) {
-        // to do
+
+        // todo: 搜索
+
         return List.of();
+    }
+
+    public static void main(String[] args) {
+
     }
 
     // to do

@@ -17,24 +17,22 @@ import java.util.List;
 
 @ParametersAreNonnullByDefault
 public class MajorServiceImplementation implements MajorService {
-    final String replace = "X";
+    private final String replace = "X";
 
     @Override
     public int addMajor(String name, int departmentId) {
         int result = 0;
-        ResultSet resultSet;
         try (Connection connection = SQLDataSource.getInstance().getSQLConnection();
-             PreparedStatement stmt = connection.prepareStatement("select * from add_Major(?,?)")//done
+             PreparedStatement stmt = connection.prepareStatement("select * from add_Major(?,?)")
         ) {
             stmt.setString(1, name);
             stmt.setInt(2, departmentId);
-            resultSet = stmt.executeQuery();
+            ResultSet resultSet = stmt.executeQuery();
             while (resultSet.next()){
                 result = resultSet.getInt("add_Major");
             }
         } catch (SQLException e) {
-//            e.printStackTrace();
-            throw new IntegrityViolationException();
+            throw new IntegrityViolationException(e);
         }
         return result;
     }
@@ -49,7 +47,7 @@ public class MajorServiceImplementation implements MajorService {
             stmt.setString(2, courseId);
             stmt.execute();
         } catch (SQLException e) {
-            throw new IntegrityViolationException();
+            throw new IntegrityViolationException(e);
         }
     }
 
@@ -63,7 +61,7 @@ public class MajorServiceImplementation implements MajorService {
             stmt.setString(2, courseId);
             stmt.execute();
         } catch (SQLException e) {
-            throw new IntegrityViolationException();
+            throw new IntegrityViolationException(e);
         }
     }
 }

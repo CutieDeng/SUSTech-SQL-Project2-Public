@@ -26,8 +26,16 @@ public class Semester {
             return false;
         }
         Semester semester = (Semester) o;
-        return id == semester.id && name.equals(semester.name) && begin.equals(semester.begin) && end
-                .equals(semester.end);
+//        return id == semester.id && name.equals(semester.name) && begin.equals(semester.begin) && end
+//                .equals(semester.end); 同上。 -- Cutie Deng
+        if (id != semester.id) {
+            return false;
+        }
+        if (!Objects.equals(name, semester.name)) {
+            return false;
+        }
+        return Objects.equals(begin, semester.begin) &&
+                Objects.equals(end, semester.end);
     }
 
     @Override

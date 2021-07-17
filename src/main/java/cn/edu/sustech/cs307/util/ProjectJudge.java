@@ -241,6 +241,7 @@ public final class ProjectJudge {
         System.out.printf("Import time usage: %.2fs\n", (endTimeNs - startTimeNs) / 1000000000.0);
 
         // 2. Test searchCourse1
+        // 测试方法实现：studentService.searchCourse
         EvalResult searchCourse1 = testSearchCourses(searchCourse1Dir);
         System.out.println("Test search course 1: " + searchCourse1.passCount.get());
         System.out.printf("Test search course 1 time: %.2fs\n", searchCourse1.elapsedTimeNs.get() / 1000000000.0);

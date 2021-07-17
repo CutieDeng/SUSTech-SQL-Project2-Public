@@ -15,8 +15,17 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class DataImporter {
+    /**
+     * service Factory, 服务工厂类，里面注册了若干服务实例，从 Config 中获取。<br>
+     * [Cutie注]: 该方法在原版本的 Config 中，会直接 new 出一个新对象，在 ProjectJudge 运行的过程中会导致出现两套
+     * 完全不同的对象组。<br>
+     * 如果要避免该事件发生，请务必实现 getInstance 方法。
+     */
     private final ServiceFactory serviceFactory = Config.getServiceFactory();
 
+    /**
+     *
+     */
     private final Map<Integer, Integer> sectionIdMap = new ConcurrentHashMap<>();
     private final Map<Integer, Integer> classIdMap = new ConcurrentHashMap<>();
     private final Map<Integer, Integer> semesterIdMap = new ConcurrentHashMap<>();

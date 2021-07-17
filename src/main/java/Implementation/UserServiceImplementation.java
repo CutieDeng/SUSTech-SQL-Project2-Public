@@ -18,12 +18,12 @@ public class UserServiceImplementation implements UserService {
     @Override
     public void removeUser(int userId) {
         try (Connection connection = SQLDataSource.getInstance().getSQLConnection();
-             PreparedStatement stmt = connection.prepareStatement("select * from remove_User(?)")//done test
+             PreparedStatement stmt = connection.prepareStatement("select * from remove_User(?)")
         ) {
             stmt.setInt(1, userId);
             stmt.execute();
         } catch (SQLException e) {
-            throw new EntityNotFoundException();
+            throw new EntityNotFoundException(e);
         }
     }
 
@@ -37,17 +37,17 @@ public class UserServiceImplementation implements UserService {
             resultSet = stmt.executeQuery();
             while (resultSet.next()){
                 String majorId = resultSet.getString("MajorId");
-                if (majorId != null){
+                if (majorId != null){ // 聪明的判断。 -- Cutie Deng
                     Student student = new Student();
                     student.id = resultSet.getInt("userId");
                     student.fullName = resultSet.getString("fullName");
                     student.enrolledDate = resultSet.getDate("enrolledDate");
                     Major major = new Major();
-                    major.id = resultSet.getInt("MajorId");//done add correspondence column id
-                    major.name = resultSet.getString("major_name");//done add correspondence column name
+                    major.id = resultSet.getInt("MajorId");
+                    major.name = resultSet.getString("major_name");
                     major.department = new Department();
-                    major.department.id = resultSet.getInt("department_id");//done add correspondence column id
-                    major.department.name = resultSet.getString("department_name");//done add correspondence column name
+                    major.department.id = resultSet.getInt("department_id");
+                    major.department.name = resultSet.getString("department_name");
                     student.major = major;
                     result.add(student);
                 }else{
@@ -69,7 +69,7 @@ public class UserServiceImplementation implements UserService {
         ResultSet resultSet;
         User result = null;
         try (Connection connection = SQLDataSource.getInstance().getSQLConnection();
-             PreparedStatement stmt = connection.prepareStatement("select * from get_User(?)")//todo
+             PreparedStatement stmt = connection.prepareStatement("select * from get_User(?)")
         ){
             stmt.setInt(1,userId);
             resultSet = stmt.executeQuery();
@@ -81,11 +81,11 @@ public class UserServiceImplementation implements UserService {
                     student.fullName = resultSet.getString("fullName");
                     student.enrolledDate = resultSet.getDate("enrolledDate");
                     Major major = new Major();
-                    major.id = resultSet.getInt("MajorId");//done add correspondence column id
-                    major.name = resultSet.getString("major_name");//done add correspondence column name
+                    major.id = resultSet.getInt("MajorId");
+                    major.name = resultSet.getString("major_name");
                     major.department = new Department();
-                    major.department.id = resultSet.getInt("department_id");//done add correspondence column id
-                    major.department.name = resultSet.getString("department_name");//done add correspondence column name
+                    major.department.id = resultSet.getInt("department_id");
+                    major.department.name = resultSet.getString("department_name");
                     student.major = major;
                     result = student;
                 } else {
@@ -96,7 +96,7 @@ public class UserServiceImplementation implements UserService {
                 }
             }
         }catch (SQLException e){
-            throw new EntityNotFoundException();
+            throw new EntityNotFoundException(e);
         }
         return result;
     }

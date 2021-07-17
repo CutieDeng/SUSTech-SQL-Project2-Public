@@ -15,16 +15,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 写的不错。 -- Cutie Deng.
+ */
 @ParametersAreNonnullByDefault
 public class DepartmentServiceImplementation implements DepartmentService {
-
 
     @Override
     public int addDepartment(String name) {
         int result = 0;
         ResultSet resultSet;
         try (Connection connection = SQLDataSource.getInstance().getSQLConnection();
-             PreparedStatement stmt = connection.prepareStatement("select * from add_Department(?)")//done
+             PreparedStatement stmt = connection.prepareStatement("select * from add_Department(?);")
         ) {
             stmt.setString(1, name);
             resultSet = stmt.executeQuery();
@@ -32,8 +34,7 @@ public class DepartmentServiceImplementation implements DepartmentService {
                 result = resultSet.getInt("add_Department");
             }
         } catch (SQLException e) {
-//            e.printStackTrace();
-            throw new IntegrityViolationException();
+            throw new IntegrityViolationException(e);
         }
         return result;
     }
@@ -42,28 +43,26 @@ public class DepartmentServiceImplementation implements DepartmentService {
     public void removeDepartment(int departmentId) {
         try (Connection connection = SQLDataSource.getInstance().getSQLConnection();
              PreparedStatement stmt = connection.prepareStatement("select * from remove_Department(?)")
-             // done,todo: no error given
         ) {
             stmt.setInt(1, departmentId);
             stmt.execute();
         } catch (SQLException e) {
-//            e.printStackTrace();
-            throw new EntityNotFoundException();
+            throw new EntityNotFoundException(e);
         }
     }
 
     @Override
     public List<Department> getAllDepartments() {
-        ResultSet resultSet;
+
         List<Department> result = new ArrayList<>();
         try (Connection connection = SQLDataSource.getInstance().getSQLConnection();
-             PreparedStatement stmt = connection.prepareStatement("select * from getalldepartments()")//done  change it to function
+             PreparedStatement stmt = connection.prepareStatement("select * from getalldepartments()")
         ) {
-            resultSet = stmt.executeQuery();
+            ResultSet resultSet = stmt.executeQuery();
             while (resultSet.next()) {
                 Department tmp = new Department();
-                tmp.id = resultSet.getInt("departmentId_out");//done add correspondence column id
-                tmp.name = resultSet.getString("name_out");//done add correspondence column name
+                tmp.id = resultSet.getInt("departmentId_out");
+                tmp.name = resultSet.getString("name_out");
                 result.add(tmp);
             }
         } catch (SQLException e) {

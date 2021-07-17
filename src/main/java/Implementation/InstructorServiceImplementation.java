@@ -14,6 +14,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -21,15 +22,15 @@ import java.util.regex.Pattern;
 public class InstructorServiceImplementation implements InstructorService {
 
     @Override
-    public void addInstructor(int userId, String firstName, String lastName) {//todo convert function to procedure
+    public void addInstructor(int userId, String firstName, String lastName) {
         try (Connection connection = SQLDataSource.getInstance().getSQLConnection();
-             PreparedStatement stmt = connection.prepareStatement("select add_Instructor(?,?,?,?)")//done todo test
+             PreparedStatement stmt = connection.prepareStatement("select add_Instructor(?,?,?,?)")
         ) {
             String fullName = firstName + " " + lastName;
             Pattern p = Pattern.compile("[\u4e00-\u9fa5]");
             Matcher m = p.matcher(fullName);
             if (m.find()) {
-                fullName = fullName.replaceAll(" ", "");
+                fullName = fullName.replaceAll("\\s", "");
             }
             stmt.setInt(1, userId);
             stmt.setString(2, firstName);

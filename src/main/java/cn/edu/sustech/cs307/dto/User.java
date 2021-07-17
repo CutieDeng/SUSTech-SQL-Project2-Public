@@ -22,7 +22,9 @@ public abstract class User {
             return false;
         }
         User user = (User) o;
-        return id == user.id && fullName.equals(user.fullName);
+//        return id == user.id && fullName.equals(user.fullName);
+        return id == user.id &&
+                Objects.equals(fullName, user.fullName);
     }
 
     @Override
