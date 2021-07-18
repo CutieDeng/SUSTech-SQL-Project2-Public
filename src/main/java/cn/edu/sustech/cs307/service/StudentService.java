@@ -25,6 +25,8 @@ import java.util.Map;
 @ParametersAreNonnullByDefault
 public interface StudentService {
     /**
+     * 如果选课失败，结果优先级在注释中描述。<br>
+     * 原文：
      * The priority of EnrollResult should be (if not SUCCESS):
      *
      * COURSE_NOT_FOUND > ALREADY_ENROLLED > ALREADY_PASSED > PREREQUISITES_NOT_FULFILLED > COURSE_CONFLICT_FOUND > COURSE_IS_FULL > UNKNOWN_ERROR

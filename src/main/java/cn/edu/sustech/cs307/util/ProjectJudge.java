@@ -206,6 +206,7 @@ public final class ProjectJudge {
             }
         }
 
+
         // 1. Import everything other than studentCourses.json
         List<Department> departments = readValueFromFile("departments.json", List.class);
         List<Major> majors = readValueFromFile("majors.json", List.class);

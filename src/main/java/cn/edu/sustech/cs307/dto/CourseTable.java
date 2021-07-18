@@ -34,9 +34,10 @@ public class CourseTable {
                 return false;
             }
             CourseTableEntry entry = (CourseTableEntry) o;
-            return classBegin == entry.classBegin && classEnd == entry.classEnd && courseFullName
-                    .equals(entry.courseFullName)
-                    && instructor.equals(entry.instructor) && location.equals(entry.location);
+            return classBegin == entry.classBegin && classEnd == entry.classEnd &&
+                    Objects.equals(courseFullName, entry.courseFullName) &&
+                    Objects.equals(instructor, entry.instructor) &&
+                    Objects.equals(location, entry.location);
         }
 
         @Override

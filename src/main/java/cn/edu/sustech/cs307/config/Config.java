@@ -141,7 +141,11 @@ public final class Config {
             } catch (NoSuchMethodException ignore) {
             }
             if (getInstance != null) {
-                Object result = getInstance.invoke(serviceFactory);
+                Object result = null;
+                try {
+                    result = getInstance.invoke(serviceFactory);
+                } catch (IllegalArgumentException ignored) {
+                }
                 if (result instanceof ServiceFactory) {
                     return (ServiceFactory) result;
                 }

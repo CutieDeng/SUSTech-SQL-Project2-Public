@@ -4,6 +4,12 @@ import cn.edu.sustech.cs307.factory.ServiceFactory;
 import cn.edu.sustech.cs307.service.*;
 
 public class ServiceFactoryImplementation extends ServiceFactory {
+    private static final ServiceFactory instance = new ServiceFactoryImplementation();
+
+    public static ServiceFactory getInstance() {
+        return instance;
+    }
+
     public ServiceFactoryImplementation(){
         registerService(CourseService.class, new CourseServiceImplementation());
         registerService(DepartmentService.class, new DepartmentServiceImplementation());
