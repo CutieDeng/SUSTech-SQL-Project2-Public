@@ -248,6 +248,7 @@ public class StudentServiceImplementation implements StudentService {
             ResultSet sectionsSelectedSet = searchSections.executeQuery();
 
 
+
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }

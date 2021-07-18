@@ -6,21 +6,30 @@ import java.util.Set;
 
 public class CourseSearchEntry {
     /**
+     * 课程<br>
      * The course of the searched section
      */
     public Course course;
 
     /**
+     * 课段<br>
      * The searched course section
      */
     public CourseSection section;
 
     /**
+     * 该课段的所有课时<br>
      * All classes of the section
      */
     public Set<CourseSectionClass> sectionClasses;
 
     /**
+     * 与该课段产生时间冲突的所有其他课段<br>
+     * 课程全名描述：courseName[sectionName]. <br>
+     * 冲突的课段来源：该学生已经选择的课段<br>
+     * 课段冲突：多个课段属于同一个课程<br>
+     * 时间冲突：多个课段挤占同一个时间点<br>
+     * tip: 任何一个课段都与它自己发生课段、时间冲突<br>
      * List all course or time conflicting courses' full name, sorted alphabetically.
      * Course full name: String.format("%s[%s]", course.name, section.name)
      * <p>
