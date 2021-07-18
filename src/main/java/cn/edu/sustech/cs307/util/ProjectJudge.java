@@ -1,6 +1,7 @@
 package cn.edu.sustech.cs307.util;
 
 import cn.edu.sustech.cs307.config.Config;
+import cn.edu.sustech.cs307.database.SQLDataSource;
 import cn.edu.sustech.cs307.dto.*;
 import cn.edu.sustech.cs307.dto.grade.Grade;
 import cn.edu.sustech.cs307.dto.prerequisite.Prerequisite;
@@ -11,7 +12,9 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.sql.Connection;
 import java.sql.Date;
+import java.sql.PreparedStatement;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -193,12 +196,13 @@ public final class ProjectJudge {
                 || !semesterService.getAllSemesters().isEmpty()
                 || !userService.getAllUsers().isEmpty()) {
             System.out.println("Database is not empty! Trying to truncate all your tables.");
-            try {
-
-                departmentService.getAllDepartments().parallelStream()
-                        .forEach(it -> departmentService.removeDepartment(it.id));
-                semesterService.getAllSemesters().parallelStream().forEach(it -> semesterService.removeSemester(it.id));
-                userService.getAllUsers().parallelStream().forEach(it -> userService.removeUser(it.id));
+            try (Connection connection = SQLDataSource.getInstance().getSQLConnection()){
+                PreparedStatement statement = connection.prepareStatement("SELECT kill_big_bang()");
+                statement.execute();
+//                departmentService.getAllDepartments().parallelStream()
+//                        .forEach(it -> departmentService.removeDepartment(it.id));
+//                semesterService.getAllSemesters().parallelStream().forEach(it -> semesterService.removeSemester(it.id));
+//                userService.getAllUsers().parallelStream().forEach(it -> userService.removeUser(it.id));
             } catch (Throwable t) {
                 System.out.println("Failed to truncate database.");
                 t.printStackTrace();

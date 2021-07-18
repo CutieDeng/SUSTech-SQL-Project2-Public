@@ -18,6 +18,8 @@ import java.sql.Date;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @SuppressWarnings("all")
 @ParametersAreNonnullByDefault
@@ -117,25 +119,25 @@ public class StudentServiceImplementation implements StudentService {
      */
     @Override
     public EnrollResult enrollCourse(int studentId, int sectionId) {
-
-        EnrollResult result = EnrollResult.UNKNOWN_ERROR;
-
-        if (true) {
-            return result;
-        }
-
         try (Connection connection = SQLDataSource.getInstance().getSQLConnection();
              PreparedStatement executeStatement = connection.
-                     prepareStatement("SELECT * FROM enroll_course(?, ?);")){
+                     prepareStatement("SELECT enroll_course(?, ?);")){
             executeStatement.setInt(1, studentId);
             executeStatement.setInt(2, sectionId);
             executeStatement.execute();
         } catch (SQLException throwable) {
-            throwable.printStackTrace();
+            try {
+                Matcher matcher = Pattern.compile("错误:\\s+(?<enumName>.+)").matcher(throwable.getMessage());
+                if (matcher.find()) {
+                    String enumName = matcher.group("enumName");
+                    return EnrollResult.valueOf(enumName);
+                }
+            } catch (IllegalArgumentException exception) {
+                exception.printStackTrace();
+                return EnrollResult.UNKNOWN_ERROR;
+            }
         }
-
-        // todo:
-        return result;
+        return EnrollResult.SUCCESS;
 
 
     }
@@ -154,7 +156,10 @@ public class StudentServiceImplementation implements StudentService {
             statement.setInt(2, sectionId);
             statement.execute();
         } catch (SQLException throwables) {
-            throw new IllegalStateException(throwables);
+            if (throwables.getMessage().equals("已完成课段")) {
+                throw new IllegalStateException(throwables);
+            }
+            // 找不到匹配的sectionId 就算了吧
         }
     }
 
@@ -170,20 +175,25 @@ public class StudentServiceImplementation implements StudentService {
     public void addEnrolledCourseWithGrade(int studentId, int sectionId, @Nullable Grade grade) {
         try (Connection connection = SQLDataSource.getInstance().getSQLConnection();
             PreparedStatement statement = connection.prepareStatement(
-                    "PERFORM enroll_course_with_grade(?, ?, ? :: varchar);"
+                    "SELECT enroll_course_with_grade(?, ?, ? :: varchar);"
             )){
             statement.setInt(1, studentId);;
             statement.setInt(2, sectionId);
-            statement.setString(3, grade.when(properStringCase));
+            if (grade == null) {
+                statement.setString(3, null);
+            }
+            else {
+                statement.setString(3, grade.when(properStringCase));
+            }
             statement.execute();
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+        } catch (SQLException ignore) {
         }
     }
 
 
     /**
      * 搜索该学生当周目课程表
+     * todo: 好多东西要写啊，不想干了。
      * @param studentId 学生 ID
      * @param date 参考日期
      * @return 该学生本周课程表
@@ -215,7 +225,9 @@ public class StudentServiceImplementation implements StudentService {
                 currentSemester = current;
             }
         }
-
+        if (currentSemester == null) {
+            return null;
+        }
         // 算出该 date 所对应的周目数。
         int diffDay = diffDay(currentSemester.begin, date);
         int beginDayOfWeek = (diffDay(currentSemester.begin, date) + 4) % 7;
@@ -244,7 +256,12 @@ public class StudentServiceImplementation implements StudentService {
     }
 
 
-
+    /**
+     * 计算两个 Date 之间的日期差
+     * @param begin 初始 Date
+     * @param end 结束 Date
+     * @return 日期差
+     */
     private static int diffDay(Date begin, Date end) {
         long diff = ((end.getTime() - begin.getTime()) >>> 10) / 84375L;
         return (int) diff;

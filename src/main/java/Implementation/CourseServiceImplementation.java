@@ -147,9 +147,10 @@ public class CourseServiceImplementation implements CourseService {
      */
     @Override
     public int addCourseSection(String courseId, int semesterId, String sectionName, int totalCapacity) {
+        courseId = courseId.replace("-" ,replace);
         try (Connection connection = SQLDataSource.getInstance().getSQLConnection();
             PreparedStatement statement = connection.prepareStatement(
-                    "SELECT * FROM add_coursesection(?, ?, ?, ?);"
+                    "SELECT add_coursesection(?, ?, ?, ?);"
             )){
             statement.setString(1, courseId);
             statement.setInt(2, semesterId);
@@ -160,8 +161,7 @@ public class CourseServiceImplementation implements CourseService {
                 return set.getInt("add_coursesection");
             }
         } catch (SQLException throwables) {
-            // 不知道怎么处理的错误情形
-            throwables.printStackTrace();
+//            throw new IntegrityViolationException(throwables);
         }
         return 0;
     }
@@ -196,8 +196,8 @@ public class CourseServiceImplementation implements CourseService {
             if (set.next()) {
                 return set.getInt("add_coursesectionclass");
             }
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+        } catch (SQLException exception) {
+            throw new IntegrityViolationException(exception);
         }
         return 0;
     }
