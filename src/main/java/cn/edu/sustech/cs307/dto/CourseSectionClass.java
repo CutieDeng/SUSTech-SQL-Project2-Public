@@ -1,7 +1,11 @@
 package cn.edu.sustech.cs307.dto;
 
+import java.sql.Date;
 import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.util.Calendar;
 import java.util.Objects;
+import java.util.Scanner;
 import java.util.Set;
 
 /**

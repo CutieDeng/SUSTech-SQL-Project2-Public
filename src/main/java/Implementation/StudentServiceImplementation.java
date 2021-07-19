@@ -81,7 +81,48 @@ public class StudentServiceImplementation implements StudentService {
         }
     }
 
-
+    /**
+     *
+     * @param studentId 学生 ID
+     * @param semesterId 学期 ID
+     * @param searchCid 查询的课程 ID<br>
+     *                  原文：search course id. Rule: searchCid in course.id
+     * @param searchName 查询的课程名 <br>
+     *   原文： search course name. Rule: searchName in "course.name[section.name]"
+     * @param searchInstructor 查询课程的教师名约束<br>
+     *               原文：search instructor name.
+     *                                   Rule: firstName + lastName begins with searchInstructor
+     *                                   or firstName + ' ' + lastName begins with searchInstructor
+     *                                   or firstName begins with searchInstructor
+     *                                   or lastName begins with searchInstructor.
+     * @param searchDayOfWeek 星期几的课程 <br>
+     *                        原文：search day of week. Matches *any* class in the section in the search day of week.
+     * @param searchClassTime 匹配课时的对应进行时段<br>
+     *             原文：search class time. Matches *any* class in the section contains the search class time.
+     * @param searchClassLocations 课程上课的地点<br>
+     *                       原文：search class locations.
+     *                            Matches *any* class in the section contains *any* location
+     *                             from the search class locations.
+     * @param searchCourseType 课程类型<br>
+     *               原文：search course type. See {@link cn.edu.sustech.cs307.service.StudentService.CourseType}
+     * @param ignoreFull 忽略课程没有剩余容量的课段<br>
+     *   原文：whether or not to ignore full course sections.
+     * @param ignoreConflict 忽略(课程/时间)冲突<br>
+     *           原文：whether or not to ignore course or time conflicting course sections.
+     *                                   Note that a section is both course and time conflicting with itself.
+     *                                   See {@link cn.edu.sustech.cs307.dto.CourseSearchEntry#conflictCourseNames}
+     * @param ignorePassed 忽略已经通过的课程<br>
+     *       原为：whether or not to ignore the student's passed courses.
+     * @param ignoreMissingPrerequisites 忽略不满足先修条件的课程<br>
+     *                                   原文：whether or not to ignore courses with missing prerequisites.
+     * @param pageSize 显示页大小<br>
+     * 原文：the page size, effectively `limit pageSize`.
+     *                                   It is the number of {@link cn.edu.sustech.cs307.dto.CourseSearchEntry}
+     * @param pageIndex 第几页<br>
+     * 原文：the page index, effectively `offset pageIndex * pageSize`.
+     *                                   If the page index is so large that there is no message,return an empty list
+     * @return
+     */
     @Override
     public List<CourseSearchEntry> searchCourse(int studentId, int semesterId,
                                                 @Nullable String searchCid,
@@ -177,7 +218,7 @@ public class StudentServiceImplementation implements StudentService {
             PreparedStatement statement = connection.prepareStatement(
                     "SELECT enroll_course_with_grade(?, ?, ? :: varchar);"
             )){
-            statement.setInt(1, studentId);;
+            statement.setInt(1, studentId);
             statement.setInt(2, sectionId);
             if (grade == null) {
                 statement.setString(3, null);
@@ -200,10 +241,9 @@ public class StudentServiceImplementation implements StudentService {
      */
     @Override
     public CourseTable getCourseTable(int studentId, Date date) {
-
         CourseTable courseTable =  new CourseTable();
         courseTable.table = new HashMap<>();
-        // todo: 获取该学生当周的所有课程
+        // 获取该学生当周的所有课程
         // 1. 查询所有学期
         // 2. 找到对应学期的周目数
         // 3. 找到相应学生在该学期选择的所有课程
@@ -213,6 +253,7 @@ public class StudentServiceImplementation implements StudentService {
         // 从数据库中获取所有的学期信息。
         SemesterService semesterService = Config.getServiceFactory().createService(SemesterService.class);
         List<Semester> allSemesters = semesterService.getAllSemesters();
+        // 释放空间
         semesterService = null;
 
         // 获得当前的学期。
@@ -226,7 +267,8 @@ public class StudentServiceImplementation implements StudentService {
             }
         }
         if (currentSemester == null) {
-            return null;
+            // 找不到对应学期
+            return courseTable;
         }
         // 算出该 date 所对应的周目数。
         int diffDay = diffDay(currentSemester.begin, date);
@@ -238,21 +280,47 @@ public class StudentServiceImplementation implements StudentService {
         // 1: 星期一, ..., 7: 星期日
         diffDay += beginDayOfWeek - 1;
         // 周目数计算结果
-        int week = 1 + (diffDay / 7);
+        // 新的优化补充：当开学日期是星期六、星期日时，当时记为第零周，而后才是第一周。
+        int week = (diffDay / 7) + ((beginDayOfWeek >= 6) ? 0 : 1);
 
-        try (Connection connection = SQLDataSource.getInstance().getSQLConnection()){
-            PreparedStatement searchSections = connection.prepareStatement(
-                    "SELECT \"sectionId\" FROM student_section WHERE \"studentId\" = ?;"
-            );
-            searchSections.setInt(1, studentId);
-            ResultSet sectionsSelectedSet = searchSections.executeQuery();
-
-
-
+        try (Connection connection = SQLDataSource.getInstance().getSQLConnection();
+            PreparedStatement statement = connection.prepareStatement("SELECT * FROM get_course_table(?, ?, ?);")){
+            statement.setInt(1, studentId);
+            statement.setInt(2, week);
+            statement.setInt(3, currentSemester.id);
+            ResultSet set = statement.executeQuery();
+            while (set.next()) {
+                /**
+                 * 返回 TABLE 的各列对应类型：
+                 *     course_full_name varchar,
+                 *     instructor_id int,
+                 *     instructor_full_name varchar,
+                 *     class_begin smallint,
+                 *     class_end smallint,
+                 *     location varchar,
+                 *     day_of_week int
+                 */
+                CourseTable.CourseTableEntry entry = new CourseTable.CourseTableEntry();
+                entry.courseFullName = set.getString("course_full_name");
+                entry.instructor = new Instructor();
+                entry.instructor.fullName = set.getString("instructor_full_name");
+                entry.instructor.id = set.getInt("instructor_id");
+                entry.classBegin = set.getShort("class_begin");
+                entry.classEnd = set.getShort("class_end");
+                entry.location = set.getString("location");
+                DayOfWeek day_of_week;
+                try {
+                    day_of_week = DayOfWeek.valueOf(set.getString("day_of_week"));
+                    if (!courseTable.table.containsKey(day_of_week)) {
+                        courseTable.table.put(day_of_week, new HashSet<>());
+                    }
+                    courseTable.table.get(day_of_week).add(entry);
+                } catch (IllegalArgumentException ignored) {
+                }
+            }
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
-
         return courseTable;
     }
 
