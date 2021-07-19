@@ -31,10 +31,7 @@ public class StudentServiceImplementation implements StudentService {
     private final static Grade.Cases<String> properStringCase = new Grade.Cases<>() {
         @Override
         public String match(PassOrFailGrade self) {
-            if (self == PassOrFailGrade.FAIL) {
-                return "F";
-            }
-            return "P";
+            return self.name();
         }
 
         @Override
@@ -136,8 +133,6 @@ public class StudentServiceImplementation implements StudentService {
                                                 boolean ignorePassed, boolean ignoreMissingPrerequisites,
                                                 int pageSize, int pageIndex) {
 
-        // todo: 搜索
-
         return List.of();
     }
 
@@ -175,6 +170,7 @@ public class StudentServiceImplementation implements StudentService {
                 }
             } catch (IllegalArgumentException exception) {
                 exception.printStackTrace();
+                // 发生未知的错误，顺便打印相关的递归栈。
                 return EnrollResult.UNKNOWN_ERROR;
             }
         }
@@ -232,6 +228,7 @@ public class StudentServiceImplementation implements StudentService {
     }
 
 
+
     /**
      * 搜索该学生当周目课程表
      * todo: 好多东西要写啊，不想干了。
@@ -243,6 +240,9 @@ public class StudentServiceImplementation implements StudentService {
     public CourseTable getCourseTable(int studentId, Date date) {
         CourseTable courseTable =  new CourseTable();
         courseTable.table = new HashMap<>();
+        for (int i = 0; i < 7; i++) {
+            courseTable.table.put(DayOfWeek.of(i + 1), new HashSet<>());
+        }
         // 获取该学生当周的所有课程
         // 1. 查询所有学期
         // 2. 找到对应学期的周目数
@@ -278,15 +278,14 @@ public class StudentServiceImplementation implements StudentService {
         }
         // beginDayOfWeek 的返回值和情况的映射关系：
         // 1: 星期一, ..., 7: 星期日
-        diffDay += beginDayOfWeek - 1;
+        diffDay += beginDayOfWeek ;
         // 周目数计算结果
         // 新的优化补充：当开学日期是星期六、星期日时，当时记为第零周，而后才是第一周。
-        int week = (diffDay / 7) + ((beginDayOfWeek >= 6) ? 0 : 1);
-
+        int week = (diffDay - 1)/ 7;
         try (Connection connection = SQLDataSource.getInstance().getSQLConnection();
             PreparedStatement statement = connection.prepareStatement("SELECT * FROM get_course_table(?, ?, ?);")){
             statement.setInt(1, studentId);
-            statement.setInt(2, week);
+            statement.setShort(2, (short) week);
             statement.setInt(3, currentSemester.id);
             ResultSet set = statement.executeQuery();
             while (set.next()) {
@@ -311,9 +310,6 @@ public class StudentServiceImplementation implements StudentService {
                 DayOfWeek day_of_week;
                 try {
                     day_of_week = DayOfWeek.valueOf(set.getString("day_of_week"));
-                    if (!courseTable.table.containsKey(day_of_week)) {
-                        courseTable.table.put(day_of_week, new HashSet<>());
-                    }
                     courseTable.table.get(day_of_week).add(entry);
                 } catch (IllegalArgumentException ignored) {
                 }
