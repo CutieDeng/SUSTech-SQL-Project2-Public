@@ -13,6 +13,7 @@ import cn.edu.sustech.cs307.service.StudentService;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
+import javax.swing.table.TableRowSorter;
 import java.sql.*;
 import java.sql.Date;
 import java.time.DayOfWeek;
@@ -132,8 +133,56 @@ public class StudentServiceImplementation implements StudentService {
                                                 boolean ignoreFull, boolean ignoreConflict,
                                                 boolean ignorePassed, boolean ignoreMissingPrerequisites,
                                                 int pageSize, int pageIndex) {
+        try (Connection connection = SQLDataSource.getInstance().getSQLConnection();
+            PreparedStatement statement = connection.prepareStatement(
+                    "SELECT * FROM search_course(? :: int, ? :: int," +
+                    "? :: varchar, ? :: varchar, ? :: varchar, ? :: varchar," +
+                    "? :: smallint, ? :: varchar[], ? :: varchar, " +
+                    "? :: bool, ? :: bool, ? :: bool, ? :: bool," +
+                    "? :: int, ? :: int);")){
+            int nowIndex = 0;
+            // SQL 内部 function 签名
+            // search_course(student_id int, semester_id int,
+            //    searchCid varchar, searchName varchar, searchInstructor varchar, searchDayOfWeek varchar,
+            //    searchClassTime smallint, searchClassLocations varchar[],
+            //    searchCourseType varchar,
+            //    ignoreFull bool, ignoreConflict bool, ignorePassed bool, ignoreMissingPrerequisites bool,
+            //    pageSize int, pageIndex int)
+            statement.setInt(++nowIndex, studentId);
+            statement.setInt(++nowIndex, semesterId);
+            statement.setString(++nowIndex, searchCid);
+            statement.setString(++nowIndex, searchName);
+            statement.setString(++nowIndex, searchInstructor);
+            statement.setString(++nowIndex, String.valueOf(searchDayOfWeek));
+            if (searchClassTime == null) {
+                statement.setNull(++nowIndex, Types.SMALLINT);
+            }
+            else {
+                statement.setShort(++nowIndex, searchClassTime);
+            }
+            statement.setArray(++nowIndex, connection.createArrayOf("varchar", searchClassLocations == null ? null : searchClassLocations.toArray()));
+            statement.setString(++nowIndex, searchCourseType.name());
+            statement.setBoolean(++nowIndex, ignoreFull);
+            statement.setBoolean(++nowIndex, ignoreConflict);
+            statement.setBoolean(++nowIndex, ignorePassed);
+            statement.setBoolean(++nowIndex, ignoreMissingPrerequisites);
+            statement.setInt(++nowIndex, pageSize);
+            statement.setInt(++nowIndex, pageIndex);
+            ResultSet set = statement.executeQuery();
+            while (set.next()) {
+                System.out.println(set.getRow());
+                CourseSearchEntry entry = new CourseSearchEntry();
+                // 初始化entry.course
+                
+                // 初始化entry.section
+                // 建立sectionClasses
+                // 跳过conflictCourseNames
 
-        return List.of();
+            }
+        } catch (SQLException exception) {
+            exception.printStackTrace();
+        }
+        return null;
     }
 
 

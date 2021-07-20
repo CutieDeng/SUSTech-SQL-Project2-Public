@@ -228,6 +228,9 @@ public interface StudentService {
 
     /**
      * 添加学生成绩<br>
+     * 该加课方式将会跳过先修课判断，直接为学生选择一门课并安排成绩。<br>
+     * 课程应当接受对应类型的成绩。<br>
+     * 课程的剩余容量不会因此发生改变。<br>
      * 原文：
      * It is used for importing existing data from other sources.
      * <p>
