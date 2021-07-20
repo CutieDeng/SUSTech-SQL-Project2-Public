@@ -2,7 +2,7 @@ package CutieImplementation.Interface;
 
 /**
  * 条件子句<br>
- * 当一个类被说成是条件子句的时候，它不得不面临以下几种情况：它是一个根条件/一个
+ * 当一个类被说成是条件子句的时候，它不得不面临以下几种情况：它是一个根条件、一个与条件集或一个“或条件集”。 <br>
  */
 public interface Condition {
     /**
