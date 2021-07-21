@@ -10,6 +10,7 @@ import cn.edu.sustech.cs307.exception.EntityNotFoundException;
 import cn.edu.sustech.cs307.exception.IntegrityViolationException;
 import cn.edu.sustech.cs307.service.SemesterService;
 import cn.edu.sustech.cs307.service.StudentService;
+import org.junit.Test;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -224,8 +225,6 @@ public class StudentServiceImplementation implements StudentService {
             }
         }
         return EnrollResult.SUCCESS;
-
-
     }
 
     /**
@@ -379,6 +378,33 @@ public class StudentServiceImplementation implements StudentService {
     private static int diffDay(Date begin, Date end) {
         long diff = ((end.getTime() - begin.getTime()) >>> 10) / 84375L;
         return (int) diff;
+    }
+
+    /**
+     * 测试能否获取一个字符串二维数组<br>
+     * 测试结果：成功！
+     */
+    @Test
+    public void testTwoDimensionalVarchar() {
+
+        try (Connection connection = SQLDataSource.getInstance().getSQLConnection()){
+            PreparedStatement statement = connection.prepareStatement(
+                    "SELECT ARRAY [" +
+                            "(SELECT ARRAY ['yyz', '是', '一', '个', '大', '笨', '蛋']), " +
+                            "(SELECT ARRAY ['Cutie', 'Deng', 'don''t', 'know', 'any', 'thing', 'qwq'])" +
+                            "]"
+            );
+            ResultSet set = statement.executeQuery();
+            if (set.next()) {
+                Array array = set.getArray("array");
+                Object array1 = array.getArray();
+                if (array1 instanceof String[][]) {
+                    System.out.println(Arrays.deepToString((Object[]) array1));
+                }
+            }
+        } catch (SQLException exception) {
+            exception.printStackTrace();
+        }
     }
 
 }
