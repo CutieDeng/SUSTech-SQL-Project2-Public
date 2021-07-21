@@ -8,6 +8,9 @@ import javax.annotation.Nonnull;
  * 和该列对应的数据类型。<br>
  **/
 public class Column extends Tuple<String, Class<?>> implements AcquisitiveEntityName {
+
+    private Table table;
+
     /**
      * Column 唯一构造器<br>
      * 传入参数不应该为空指针
@@ -31,4 +34,24 @@ public class Column extends Tuple<String, Class<?>> implements AcquisitiveEntity
     public String toString() {
         return value1;
     }
+
+    /**
+     * 设置列的归属表格<br>
+     * 该方法可以被反复调用，无条件修改列的所属表格
+     * @param table 设置列的归属
+     */
+    void setTable(Table table) {
+        this.table = table;
+    }
+
+    /**
+     * 获取该列的容器，也就是该列所属的表格
+     * @return 返回该列所属的表格
+     */
+    @Override
+    public AcquisitiveEntityName getParentEntity() {
+        return table;
+    }
+
+
 }
