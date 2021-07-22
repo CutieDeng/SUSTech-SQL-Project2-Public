@@ -183,7 +183,7 @@ public class StudentServiceImplementation implements StudentService {
         } catch (SQLException exception) {
             exception.printStackTrace();
         }
-        return null;
+        return List.of();
     }
 
 
