@@ -23,6 +23,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+
+@SuppressWarnings("all")
 public final class ProjectJudge {
     // load benchmark data
     private static final File searchCourse1Dir = new File("./data/searchCourse1/");
@@ -291,6 +293,11 @@ public final class ProjectJudge {
     public static void main(String[] args) {
         ProjectJudge judge = new ProjectJudge();
         judge.benchmark();
+        StudentService service = Config.getServiceFactory().createService(StudentService.class);
+        if (service instanceof StudentServiceImplementation) {
+            System.out.println(((StudentServiceImplementation) service).countSuccess);
+            System.out.println(((StudentServiceImplementation) service).countForEnrollCourse);
+        }
     }
 
     private static <T> T readValueFromFile(File file, Class<T> tClass) {

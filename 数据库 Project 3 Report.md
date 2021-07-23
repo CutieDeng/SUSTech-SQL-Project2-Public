@@ -1571,3 +1571,490 @@ END
 $$ LANGUAGE 'plpgsql';
 ```
 
+## 笔者补充方法
+
+### Course Service Implementation
+
+#### add_course_section
+
+该方法传入四个参数：
+
+- courseIdIn varchar: 表示我们将要加入的 section 隶属于某个 course, 可能是 NULL. 笔者会在 Java 中对此进行约束，避免该错误发生。
+- semesterIdIn integer: 表示新的 section 的课程是对应学期的课程。
+- sectionNameIn varchar: 新 section 全名，该属性如果被传入 NULL 不会发生异常，Java 对此承诺不会出现这种现象。
+- totalCapacityIn integer: 课段容量。
+
+该方法将会返回一个 integer, 表示新课段的唯一 ID. 
+
+除此之外，该方法还默认是实现了对 (courseId, semesterId, sectionName) 元组的 UNIQUE 约束——一旦传入一个新的相同元组，也就意味着我们最后的返回结果超过一行——这会导致 raise exception 间接使得 INSERT 失败。
+
+而笔者再三考虑—— sectionName 应该某种意义上来说，是一个比较特别的属性——恰恰相反，totalCapacity 虽然也有一定的标识作用，但笔者还是觉得意义不大，谁没事会根据 capacity 来判断、区分课程呢？
+
+因此，笔者最后还是断定这个 unique tuple 不应当包含 capacity 信息，以上。
+
+```SQL
+CREATE OR REPLACE FUNCTION add_course_section(courseIdIn varchar,
+semesterIdIn integer, sectionNameIn varchar, totalCapacityIn integer)
+    RETURNS INTEGER
+    language plpgsql
+as $$
+    begin
+        INSERT INTO "CourseSection"("courseId", "semesterId", "sectionName", "totalCapacity", "leftCapacity")
+        VALUES (courseIdIn, semesterIdIn, sectionNameIn, totalCapacityIn, totalCapacityIn);
+        RETURN (SELECT "CourseSection"."sectionId"
+        FROM "CourseSection"
+        WHERE "courseId" = courseIdIn
+            AND "semesterId" = semesterIdIn
+            AND "sectionName" = sectionNameIn);
+    end
+    $$
+```
+
+#### add_course_section_class
+
+该方法用于为 section 添加具体的 class, 以便于让学生能够进行具体的课程学习。
+
+该方法有 7 个传入参数：
+
+- sectionIdIn integer, 表示该 class 对应的 section.
+- instructorIdIn integer, 表示该课时授课者的 ID. Java 对它进行了一定的约束，该参数不可能是 NULL. 这无形中避免了我们之前在讨论该表格约束不足的缺陷。
+- DayOfWeekIn varchar, 它对应的 Java 类型是枚举类，这意味着它只可能是七个特别字符串中的一个，同时 Java 承诺它不会被赋予一个 NULL 值。
+- weekListIn smallint[], 表示该课时的周时上课要求，Java 在执行该方法时，有两点保证：weekList 不会是 NULL, 同时 weekList 不会是没有长度的数组（一个长度为 0 的数组）。
+- classStartIn smallint, 表示该课时当天的开始时间。
+- classEndIn smallint, 表示该课时当天的结束时间。这两个属性在 Java UI 中会被限制： $0 \leq classStart \leq classEnd$
+- locationIn varchar, java constraint: NOT NULL. 
+
+该方法将会返回一个值，描述被新加入的 class 所得到的唯一 ID. 
+
+而笔者突然考虑到——一个具体的课时，无论如何都要承载对应的上课时间地点，我们不愿意发生这样一件事情——两个 class 被同时设置在同一时间、同一地点进行授课，那恐怕会发生一点令人捉摸不透的冲突。
+
+:warning: 尽管如此，这件事情依旧是很可能发生的，比方说一门 course 下分列了几门 sections, 但它们的 theory class 是一门大课，这意味着各个 section 共享同一个 class 的执行情况，而我们的数据结构设置恐怕难以满足这件事情——所以这个特别的 UNIQUE 检查我还是悄悄跳过吧。
+
+```sql
+CREATE OR REPLACE FUNCTION add_course_section_class(
+sectionIdIn integer,
+instructorIdIn integer,
+DayOfWeekIn varchar,
+weekListIn smallint[],
+classStartIn smallint,
+classEndIn smallint,
+locationIn varchar
+) RETURNS INTEGER
+LANGUAGE plpgsql
+AS
+    $$
+    BEGIN
+       INSERT INTO "CourseSectionClass"("sectionId", "instructor", "dayOfWeek", "weekList", "classStart", "classEnd", location)
+       VALUES (sectionIdIn, instructorIdIn, DayOfWeekIn, weekListIn, classStartIn, classEndIn, locationIn);
+       RETURN (
+           SELECT id
+           FROM "CourseSectionClass"
+           WHERE "sectionId" = sectionIdIn
+            AND instructor = instructorIdIn
+            AND "dayOfWeek" = DayOfWeekIn
+            AND "weekList" = weekListIn
+            AND "classStart" = classStartIn
+            AND "classEnd" = classEndIn
+            AND "location" = locationIn
+           );
+    END
+    $$
+```
+
+### Student Service Implementation
+
+#### add_student
+
+该方法将会为数据库中添加一个学生实体，它同时会自动、同步地向 User 表格中添加学生的相关信息，以保持表格的约束条件。
+
+传入参数：
+
+- userIdIn integer, 学生 ID.
+- majorIdIn integer, 学生专业，虽然笔者认为这里可以设为 NULL, 但遗憾的是，通过 DBMS 去调用的结果是——该值不能为 NULL. 
+- firstNameIn varchar, 学生的姓氏。
+- lastNameIn varchar, 学生的名称。Java 会对姓名进行检查——虽然原则上允许等于空字符串，不过肯定不允许 NULL 的出现就是了。
+- fullNameIn varchar, 学生全称，Java 会自动根据 first name, last name 相关情况进行自动合成。
+- enrolledDateIn date, 学生的注册日期——没什么意义，但不允许非空的一个量。
+
+传出：VOID
+
+```sql
+CREATE OR REPLACE FUNCTION add_student(userIdIn integer,
+majorIdIn integer,
+firstNameIn varchar,
+lastNameIn varchar,
+fullNameIn varchar,
+enrolledDateIn date)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+    BEGIN
+        INSERT INTO "User"(id, "fullName") VALUES (userIdIn, fullNameIn);
+        INSERT INTO "Student"("userId", "firstName", "lastName", "enrolledDate", "majorId")
+        VALUES (userIdIn, firstNameIn, lastNameIn, enrolledDateIn, majorIdIn);
+    END
+    $$
+```
+
+观察代码，显然我们很容易确定，add_student 方法发生错误只有一种情况：依赖关系发生错误，references 外键约束失败。
+
+#### enroll_course
+
+有些方法写起来难度极大，我们不妨先跳过，先完成简单的方法编写。
+
+该方法用于提供学生选择课段的权力，所以传入参数非常简单：
+
+- studentIdIn integer, 要选择课程的学生 ID.
+- courseSectionIdIn integer, 要选择的课段 ID.
+
+二者都不可能是 NULL 值。
+
+返回的情况繁多，在此笔者进行详细解释：
+
+- COURSE_NOT_FOUND: 当学生选择的 course section ID 无法被找到的情况下，则会诱发该错误。
+
+- ALREADY_ENROLLED: 学生企图重复选择相同的课段，将会导致该错误。值得注意的是，无论这门课段该学生有无获得成绩，都不能被重复选择——重修课程应当选择下一学期对应 course 的 section. 
+
+- ALREADY_PASSED: 
+  首先，我们尝试描述一个 view 来观察各个学生完成的课程情况
+
+  ```sql
+  create or replace function enroll_course(studentidin integer, coursesectionidin integer) returns void
+      language plpgsql
+  as
+  $$
+  BEGIN
+      -- 如果找不到对应的 section ID, 返回错误 COURSE_NOT_FOUND.
+          IF ((SELECT count(*) FROM "CourseSection"
+          WHERE "sectionId" = courseSectionIdIn) = 0) THEN
+              RAISE EXCEPTION 'COURSE_NOT_FOUND';
+              END IF;
+  
+      -- 课段已经被该学生选择了。
+          IF (SELECT count(*) FROM "student_section"
+          WHERE "sectionId" = courseSectionIdIn
+          AND "studentId" = studentIdIn) > 0 THEN
+              RAISE EXCEPTION 'ALREADY_ENROLLED';
+          end if;
+  
+      -- 课段对应课程已经通过。
+      IF (SELECT count(*)
+      FROM
+           (SELECT "courseId"
+          FROM studentPass
+          WHERE "studentId" = studentIdIn) AS proper_course
+      WHERE (proper_course."courseId" = get_a_course(courseSectionIdIn))
+          ) > 0 THEN
+          RAISE EXCEPTION 'ALREADY_PASSED';
+      end if;
+  
+      -- 课程前置条件不满足。
+          IF NOT passed_prerequisites_for_course(studentIdIn, get_a_course(courseSectionIdIn)
+              , NULL, NULL) THEN
+              RAISE EXCEPTION 'PREREQUISITES_NOT_FULFILLED';
+          end if;
+  
+      -- 选择了重复的课程。
+          IF (WITH have_chosen_course AS
+              (SELECT "CourseSection"."courseId"
+              FROM
+                  (SELECT "sectionId"
+                  FROM "student_section"
+                  WHERE "studentId" = studentIdIn
+                      AND (grade IS NULL OR grade = 'X')) AS special_sections
+              INNER JOIN "CourseSection"
+                  ON "CourseSection"."sectionId" = special_sections."sectionId")
+          SELECT count(*)
+          FROM have_chosen_course
+          WHERE "courseId" = (get_a_course(courseSectionIdIn) :: varchar)) > 0 THEN
+              RAISE EXCEPTION 'COURSE_CONFLICT_FOUND';
+          end if;
+  
+      -- 选择了时间冲突的课段
+          IF
+              (SELECT count(*)
+                  FROM
+              (SELECT "dayOfWeek", "weekList", "classStart", "classEnd"
+              FROM "CourseSectionClass"
+              WHERE "sectionId" IN
+                  (SELECT "sectionId"
+                  FROM student_section
+                  WHERE "studentId" = studentIdIn AND (grade IS NULL OR grade = 'X')) ) AS compared_section
+              JOIN (
+                  SELECT "dayOfWeek", "weekList", "classStart", "classEnd"
+                  FROM "CourseSectionClass"
+                  WHERE "sectionId" = courseSectionIdIn
+              ) as chosen_section ON (
+                  (compared_section."weekList" && chosen_section."weekList")
+                  AND (compared_section."dayOfWeek" = chosen_section."dayOfWeek")
+                  AND (
+                      NOT (
+                          ((compared_section."classEnd" - chosen_section."classStart") *
+                          (compared_section."classEnd" - chosen_section."classEnd") > 0)
+                          AND
+                          (
+                              (chosen_section."classEnd" - compared_section."classStart") *
+                              (chosen_section."classEnd" - compared_section."classEnd") > 0
+                              )
+                          )
+                      )
+                  )) > 0 THEN
+              RAISE EXCEPTION 'COURSE_CONFLICT_FOUND';
+          end if;
+  
+      -- 课段容量不足错误
+          IF ((SELECT "leftCapacity"
+          FROM "CourseSection"
+          WHERE "sectionId" = courseSectionIdIn) <= 0) THEN
+              RAISE EXCEPTION 'COURSE_IS_FULL';
+          end if;
+  
+          INSERT INTO student_section("studentId", "sectionId") VALUES (studentIdIn, courseSectionIdIn);
+  
+      END
+  $$;
+  
+  ```
+
+  ~~而后我们便能够通过 `get_Course_By_Section` 和该 view 便能够推断出这门课程是否被通过了！~~
+
+  值得注意，该 view 会自动过滤掉 NULL 值的 courseId, 所以我们可以在之后使用该 view 的时候可以大可不必那么草木皆兵。
+
+- PREREQUISITES_NOT_FULFILLED: 调用原 project 的方法来判断对应的 prerequisites 是否满足。
+
+- COURSE_CONFLICT_FOUND: 课时安排冲突，或选择了重复的 course. 
+
+- COURSE_IS_FULL: 该课段剩余容量为零。
+
+该 function 有点冗长——以至于作者本人也吃不准这到底对不对。
+
+```sql
+CREATE OR REPLACE FUNCTION enroll_course(
+studentIdIn integer,
+courseSectionIdIn integer)
+RETURNS VOID
+LANGUAGE plpgsql
+AS
+$$
+BEGIN
+    -- 如果找不到对应的 section ID, 返回错误 COURSE_NOT_FOUND.
+        IF ((SELECT count(*) FROM "student_section"
+        WHERE "sectionId" = courseSectionIdIn) = 0) THEN
+            RAISE EXCEPTION 'COURSE_NOT_FOUND';
+            END IF;
+
+    -- 课段已经被该学生选择了。
+        IF (SELECT count(*) FROM "student_section"
+        WHERE "sectionId" = courseSectionIdIn
+        AND "studentId" = studentIdIn) > 0 THEN
+            RAISE EXCEPTION 'ALREADY_ENROLLED';
+        end if;
+
+    -- 课段对应课程已经通过。
+    IF (SELECT count(*)
+    FROM
+         (SELECT "courseId"
+        FROM studentPass
+        WHERE "studentId" = studentIdIn) AS proper_course
+    WHERE (proper_course."courseId" = get_a_course(courseSectionIdIn))
+        ) > 0 THEN
+        RAISE EXCEPTION 'ALREADY_PASSED';
+    end if;
+
+    -- 课程前置条件不满足。
+        IF NOT passed_prerequisites_for_course(studentIdIn, get_a_course(courseSectionIdIn)
+            , NULL, NULL) THEN
+            RAISE EXCEPTION 'PREREQUISITES_NOT_FULFILLED';
+        end if;
+
+    -- 选择了重复的课程。
+        IF (WITH have_chosen_course AS
+            (SELECT "CourseSection"."courseId"
+            FROM
+                (SELECT "sectionId"
+                FROM "student_section"
+                WHERE "studentId" = studentIdIn
+                    AND (grade IS NULL OR grade = 'X')) AS special_sections
+            INNER JOIN "CourseSection"
+                ON "CourseSection"."sectionId" = special_sections."sectionId")
+        SELECT count(*)
+        FROM have_chosen_course
+        WHERE "courseId" = (get_a_course(courseSectionIdIn) :: varchar)) > 0 THEN
+            RAISE EXCEPTION 'COURSE_CONFLICT_FOUND';
+        end if;
+
+    -- 选择了时间冲突的课段
+        IF
+            (SELECT count(*)
+                FROM
+            (SELECT "dayOfWeek", "weekList", "classStart", "classEnd"
+            FROM "CourseSectionClass"
+            WHERE "sectionId" IN
+                (SELECT "sectionId"
+                FROM student_section
+                WHERE "studentId" = studentIdIn AND (grade IS NULL OR grade = 'X')) ) AS compared_section
+            JOIN (
+                SELECT "dayOfWeek", "weekList", "classStart", "classEnd"
+                FROM "CourseSectionClass"
+                WHERE "sectionId" = courseSectionIdIn
+            ) as chosen_section ON (
+                (compared_section."weekList" && chosen_section."weekList")
+                AND (compared_section."dayOfWeek" = chosen_section."dayOfWeek")
+                AND (
+                    NOT (
+                        ((compared_section."classEnd" - chosen_section."classStart") *
+                        (compared_section."classEnd" - chosen_section."classEnd") > 0)
+                        AND
+                        (
+                            (chosen_section."classEnd" - compared_section."classStart") *
+                            (chosen_section."classEnd" - compared_section."classEnd") > 0
+                            )
+                        )
+                    )
+                )) > 0 THEN
+            RAISE EXCEPTION 'COURSE_CONFLICT_FOUND';
+        end if;
+
+    -- 课段容量不足错误
+        IF ((SELECT "leftCapacity"
+        FROM "CourseSection"
+        WHERE "sectionId" = courseSectionIdIn) <= 0) THEN
+            RAISE EXCEPTION 'COURSE_IS_FULL';
+        end if;
+
+        INSERT INTO student_section("studentId", "sectionId") VALUES (studentIdIn, courseSectionIdIn);
+
+    END
+$$;
+
+```
+
+看着办吧，全凭运气。
+
+#### drop_selection
+
+传入参数：
+
+- studentIdIn integer, drop selection 主体用户（学生）的 ID.
+- sectionIdIn integer, 学生推掉的课段 ID.
+
+没有传出参数。
+
+```sql
+create or replace function drop_selection(studentidin integer, sectionidin integer) returns void
+    language plpgsql
+as
+$$
+BEGIN
+        IF ((SELECT count(*) FROM student_section
+            WHERE "sectionId" = sectionIdIn
+            AND "studentId" = studentIdIn) = 0) THEN RAISE EXCEPTION 'Cannot find section. ' ; END IF;
+        IF ((SELECT count(*) FROM student_section
+            WHERE "sectionId" = sectionIdIn
+            AND "studentId" = studentIdIn
+                AND grade IS NOT NULL
+                AND grade <> 'X') <> 0) THEN RAISE EXCEPTION 'Finished the section.' ; END IF;
+
+        IF ((SELECT count(*) FROM student_section
+            WHERE "sectionId" = sectionIdIn
+            AND "studentId" = studentIdIn
+                AND grade IS NULL) > 0) THEN
+            UPDATE "CourseSection" SET "leftCapacity" = "leftCapacity" + 1
+            WHERE "sectionId" = sectionIdIn;
+        end if;
+
+        DELETE FROM student_section WHERE "sectionId" = sectionIdIn
+        AND "studentId" = studentIdIn;
+    end;
+$$;
+```
+
+#### get_a_course
+
+简单课程查询——原有方法过于拉垮。
+
+```sql
+CREATE FUNCTION get_a_course(sectionIdIn integer)
+RETURNS varchar
+LANGUAGE plpgsql
+AS $$
+    BEGIN
+        RETURN (
+            SELECT "courseId"
+            FROM "CourseSection"
+            WHERE "sectionId" = sectionIdIn
+            );
+    end;
+    $$
+```
+
+#### kill_big_bang
+
+删库跑路。
+
+```sql
+create function kill_big_bang() returns void
+    language plpgsql
+as
+$$
+BEGIN
+        TRUNCATE "Course" CASCADE ;
+        TRUNCATE "CourseSection" CASCADE ;
+        TRUNCATE "CourseSectionClass" CASCADE ;
+        TRUNCATE "Department" CASCADE ;
+        TRUNCATE "Instructor" CASCADE ;
+        TRUNCATE "Major" CASCADE ;
+        TRUNCATE "Major_Course" CASCADE ;
+        TRUNCATE "Semester" CASCADE ;
+        TRUNCATE "Student" CASCADE ;
+        TRUNCATE student_section CASCADE ;
+        TRUNCATE "User" CASCADE ;
+        TRUNCATE "prerequisite" CASCADE ;
+
+        ALTER SEQUENCE "CourseSection_sectionId_seq" restart with 1;
+        ALTER SEQUENCE "CourseSectionClass_id_seq" restart with 1;
+        ALTER SEQUENCE "Department_departmentId_seq" restart with 1;
+        ALTER SEQUENCE "Major_Course_id_seq" restart with 1;
+        ALTER SEQUENCE "Major_id_seq" restart with 1;
+        ALTER SEQUENCE "Semester_id_seq" restart with 1;
+    END;
+$$;
+
+alter function kill_big_bang() owner to postgres;
+```
+
+### 补充
+
+#### drop_selection
+
+之所以要补充该方法描述——这是因为笔者拿不准 project “希望”我们做什么。
+
+```sql
+create or replace function drop_selection(studentidin integer, sectionidin integer) returns void
+    language plpgsql
+as
+$$
+BEGIN
+        IF ((SELECT count(*) FROM student_section
+            WHERE "sectionId" = sectionIdIn
+            AND "studentId" = studentIdIn) = 0) THEN RAISE EXCEPTION 'Cannot find section. ' ; END IF;
+        IF ((SELECT count(*) FROM student_section
+            WHERE "sectionId" = sectionIdIn
+            AND "studentId" = studentIdIn
+                AND grade IS NOT NULL
+                AND grade <> 'X') <> 0) THEN RAISE EXCEPTION 'Finished the section.' ; END IF;
+        IF ((SELECT count(*) FROM student_section
+            WHERE "sectionId" = sectionIdIn
+            AND "studentId" = studentIdIn
+                AND grade IS NULL) > 0 or true) THEN
+            UPDATE "CourseSection" SET "leftCapacity" = "leftCapacity" + 1
+            WHERE "sectionId" = sectionIdIn;
+        end if;
+
+        DELETE FROM student_section WHERE "sectionId" = sectionIdIn
+        AND "studentId" = studentIdIn;
+    end;
+$$;
+
+alter function drop_selection(integer, integer) owner to postgres;
+```

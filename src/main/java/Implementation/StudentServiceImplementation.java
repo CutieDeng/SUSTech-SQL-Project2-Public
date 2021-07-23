@@ -6,7 +6,6 @@ import cn.edu.sustech.cs307.dto.*;
 import cn.edu.sustech.cs307.dto.grade.Grade;
 import cn.edu.sustech.cs307.dto.grade.HundredMarkGrade;
 import cn.edu.sustech.cs307.dto.grade.PassOrFailGrade;
-import cn.edu.sustech.cs307.exception.EntityNotFoundException;
 import cn.edu.sustech.cs307.exception.IntegrityViolationException;
 import cn.edu.sustech.cs307.service.SemesterService;
 import cn.edu.sustech.cs307.service.StudentService;
@@ -14,7 +13,6 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
-import javax.swing.table.TableRowSorter;
 import java.sql.*;
 import java.sql.Date;
 import java.time.DayOfWeek;
@@ -48,35 +46,43 @@ public class StudentServiceImplementation implements StudentService {
     private final static Date originDate = Date.valueOf(LocalDate.EPOCH);
 
     /**
-     * 将学生的相关信息添加入数据库中。
+     * 将学生的相关信息添加入数据库中。<br>
      * @param userId 学生 ID<br>
      *               老师和学生都共同用这一套 ID, 表示人物。
      * @param majorId 专业 ID
      * @param firstName 学生名称
      * @param lastName 学生姓氏
      * @param enrolledDate 加入时间
+     * @throws IntegrityViolationException 传入了 NULL 参数，或 sql 语句执行发生错误。
      */
     @Override
     public void addStudent(int userId, int majorId, String firstName, String lastName, Date enrolledDate) {
+        if (Objects.isNull(firstName)) {
+            throw new IntegrityViolationException("执行 addStudent 参数有误，cause by: firstName = NULL. ");
+        }
+        if (Objects.isNull(lastName)) {
+            throw new IntegrityViolationException("执行 addStudent 参数有误，cause by: lastName = NULL. ");
+        }
+        if (Objects.isNull(enrolledDate)) {
+            throw new IntegrityViolationException("执行 addStudent 参数有误，cause by: enrolledDate = NULL. ");
+        }
+        String fullName = firstName + lastName;
+        boolean alphabet = !fullName.matches(".*[\u4e00-\u9fa5].*");
+        if (alphabet) {
+            fullName = firstName + " " + lastName;
+        }
         try (Connection connection = SQLDataSource.getInstance().getSQLConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM add_student(?, ?, ?, ?, ? :: DATE);");
-             PreparedStatement addUserStatement = connection.prepareStatement("select add_user(?, ?);")){
-            String fullName = firstName + lastName;
-            boolean alphabet = !fullName.matches(".*[\u4e00-\u9fa5].*");
-            if (alphabet) {
-                fullName = firstName + " " + lastName;
-            }
-            addUserStatement.setInt(1, userId);
-            addUserStatement.setString(2, fullName);
-            preparedStatement.setInt(1, userId);
-            preparedStatement.setInt(2, majorId);
-            preparedStatement.setString(3, firstName);
-            preparedStatement.setString(4, lastName);
-            preparedStatement.setDate(5, enrolledDate);
-            addUserStatement.execute();
-            preparedStatement.execute();
+            PreparedStatement statement = connection.prepareStatement("SELECT add_student(?, ?, ?, ?, ?, ?)")){
+            statement.setInt(1, userId);
+            statement.setInt(2, majorId);
+            statement.setString(3, firstName);
+            statement.setString(4, lastName);
+            statement.setString(5, fullName);
+            statement.setDate(6, enrolledDate);
+            statement.execute();
         } catch (SQLException throwable) {
-            throw new IntegrityViolationException(throwable);
+            // 根据 report 分析，易知发生错误的原因极可能是外键约束导致数据插入错误，直接抛出对应错误即可。
+            throw new IntegrityViolationException(throwable.getMessage());
         }
     }
 
@@ -205,6 +211,7 @@ public class StudentServiceImplementation implements StudentService {
      */
     @Override
     public EnrollResult enrollCourse(int studentId, int sectionId) {
+        countForEnrollCourse ++;
         try (Connection connection = SQLDataSource.getInstance().getSQLConnection();
              PreparedStatement executeStatement = connection.
                      prepareStatement("SELECT enroll_course(?, ?);")){
@@ -224,8 +231,12 @@ public class StudentServiceImplementation implements StudentService {
                 return EnrollResult.UNKNOWN_ERROR;
             }
         }
+        countSuccess++;
         return EnrollResult.SUCCESS;
     }
+
+    public volatile int countForEnrollCourse = 0;
+    public volatile int countSuccess = 0;
 
     /**
      * 退课
@@ -241,10 +252,10 @@ public class StudentServiceImplementation implements StudentService {
             statement.setInt(2, sectionId);
             statement.execute();
         } catch (SQLException throwables) {
-            if (throwables.getMessage().equals("已完成课段")) {
-                throw new IllegalStateException(throwables);
+            if (throwables.getMessage().contains("Finished the section.")) {
+                throw new IllegalStateException(throwables.getMessage());
             }
-            // 找不到匹配的sectionId 就算了吧
+            // 找不到匹配的sectionId 就算了，算我倒霉。
         }
     }
 
@@ -406,5 +417,68 @@ public class StudentServiceImplementation implements StudentService {
             exception.printStackTrace();
         }
     }
+
+    public static void parseForDigitLogic() {
+       Scanner input = new Scanner(System.in);
+       List<String> result = new ArrayList<>();
+       Pattern pattern = Pattern.compile("h\\d\\d\\d");
+       while (input.hasNextLine()) {
+           String nowString = input.nextLine();
+           if (nowString.length() == 0) {
+               break;
+           }
+           Matcher matcher = pattern.matcher(nowString);
+           int i = nowString.indexOf("***");
+           if (matcher.find()) {
+               String group = matcher.group();
+               if (group.matches("h00[1-9a-fA-F]")) {
+                   nowString = nowString.substring(0, i) + "001" + nowString.substring(i+3);
+               }
+               else if (group.matches("h0[1-9a-fA-F]0")) {
+                   nowString = nowString.substring(0, i) + "010" + nowString.substring(i+3);
+               } else if (group.matches("h[1-9a-fA-F]00")) {
+                   nowString = nowString.substring(0, i) + "100" + nowString.substring(i+3);
+               }
+               result.add(nowString);
+           }
+       }
+        System.out.println("\n");
+        for (String s : result) {
+            System.out.println(s);
+        }
+    }
+
+    public static void main(String[] args) {
+        Scanner input = new Scanner(System.in);
+        int[] now = new int[8];
+        for (int i = 0; i < 8; i++) {
+            now[i] = input.nextInt();
+        }
+        int[] next = new int[8];
+        for (int i = 0; i < 20; i++) {
+            flush(now, next);
+            int[] tmp = now;
+            now = next;
+            next = tmp;
+            System.out.println(i + "\t" + Arrays.toString(now));
+        }
+
+    }
+
+    public static void flush(int[] now, int[] next) {
+        next[0] = not (now[0]);
+        next[1] = now[0];
+        next[2] = now[1];
+        next[3] = now[2];
+        next[4] = now[3];
+        next[5] = now[4];
+        next[6] = now[5];
+        next[7] = now[6];
+    }
+
+    public static int not(int k) {
+        return k == 0 ? 1 : 0;
+    }
+
 
 }
