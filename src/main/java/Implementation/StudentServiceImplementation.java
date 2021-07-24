@@ -226,7 +226,9 @@ public class StudentServiceImplementation implements StudentService {
                     return EnrollResult.valueOf(enumName);
                 }
             } catch (IllegalArgumentException exception) {
-                exception.printStackTrace();
+                System.out.println(studentId + "\tchoose\t" + sectionId);
+                System.out.println(exception.getMessage());
+                System.out.println("\n");
                 // 发生未知的错误，顺便打印相关的递归栈。
                 return EnrollResult.UNKNOWN_ERROR;
             }
@@ -331,7 +333,7 @@ public class StudentServiceImplementation implements StudentService {
         }
         // 算出该 date 所对应的周目数。
         int diffDay = diffDay(currentSemester.begin, date);
-        int beginDayOfWeek = (diffDay(currentSemester.begin, date) + 4) % 7;
+        int beginDayOfWeek = (diffDay(originDate, currentSemester.begin) + 4) % 7;
         if (beginDayOfWeek == 0) {
             beginDayOfWeek = 7;
         }
@@ -341,6 +343,9 @@ public class StudentServiceImplementation implements StudentService {
         // 周目数计算结果
         // 新的优化补充：当开学日期是星期六、星期日时，当时记为第零周，而后才是第一周。
         int week = (diffDay - 1)/ 7;
+        if (beginDayOfWeek == 1) {
+            week ++;
+        }
         try (Connection connection = SQLDataSource.getInstance().getSQLConnection();
             PreparedStatement statement = connection.prepareStatement("SELECT * FROM get_course_table(?, ?, ?);")){
             statement.setInt(1, studentId);
@@ -447,38 +452,5 @@ public class StudentServiceImplementation implements StudentService {
             System.out.println(s);
         }
     }
-
-    public static void main(String[] args) {
-        Scanner input = new Scanner(System.in);
-        int[] now = new int[8];
-        for (int i = 0; i < 8; i++) {
-            now[i] = input.nextInt();
-        }
-        int[] next = new int[8];
-        for (int i = 0; i < 20; i++) {
-            flush(now, next);
-            int[] tmp = now;
-            now = next;
-            next = tmp;
-            System.out.println(i + "\t" + Arrays.toString(now));
-        }
-
-    }
-
-    public static void flush(int[] now, int[] next) {
-        next[0] = not (now[0]);
-        next[1] = now[0];
-        next[2] = now[1];
-        next[3] = now[2];
-        next[4] = now[3];
-        next[5] = now[4];
-        next[6] = now[5];
-        next[7] = now[6];
-    }
-
-    public static int not(int k) {
-        return k == 0 ? 1 : 0;
-    }
-
 
 }

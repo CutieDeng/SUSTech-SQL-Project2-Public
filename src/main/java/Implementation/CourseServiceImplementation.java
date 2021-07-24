@@ -231,7 +231,9 @@ public class CourseServiceImplementation implements CourseService {
             statement.setInt(2, instructorId);
             statement.setString(3, dayOfWeek.name());
             statement.setArray(4, connection.createArrayOf("smallint", weekList.toArray()));
-            statement.setShort(5, classEnd);
+            // DEBUG DIARY: 发现一个毁灭我心态的 BUG.
+            // 原文： statement.setShort(5, classEnd);
+            statement.setShort(5, classStart);
             statement.setShort(6, classEnd);
             statement.setString(7, location);
             ResultSet set = statement.executeQuery();
