@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @SuppressWarnings("all")
 @ParametersAreNonnullByDefault
@@ -140,6 +141,13 @@ public class StudentServiceImplementation implements StudentService {
                                                 boolean ignoreFull, boolean ignoreConflict,
                                                 boolean ignorePassed, boolean ignoreMissingPrerequisites,
                                                 int pageSize, int pageIndex) {
+        if (Objects.nonNull(searchCid)) {
+            searchCid = searchCid.replaceAll("-", "X");
+        }
+        List<CourseSearchEntry> searchEntries = new ArrayList<>();
+        HashMap<Integer, CourseSearchEntry> fastEntry = new HashMap<>();
+        int nowPage = 0;
+        int nowPageIndex = 0;
         try (Connection connection = SQLDataSource.getInstance().getSQLConnection();
             PreparedStatement statement = connection.prepareStatement(
                     "SELECT * FROM search_course(? :: int, ? :: int," +
@@ -155,41 +163,185 @@ public class StudentServiceImplementation implements StudentService {
             //    searchCourseType varchar,
             //    ignoreFull bool, ignoreConflict bool, ignorePassed bool, ignoreMissingPrerequisites bool,
             //    pageSize int, pageIndex int)
-            statement.setInt(++nowIndex, studentId);
-            statement.setInt(++nowIndex, semesterId);
-            statement.setString(++nowIndex, searchCid);
-            statement.setString(++nowIndex, searchName);
-            statement.setString(++nowIndex, searchInstructor);
-            statement.setString(++nowIndex, String.valueOf(searchDayOfWeek));
+            statement.setInt(1, studentId);
+            statement.setInt(2, semesterId);
+            statement.setString(3, searchCid);
+            statement.setString(4, searchName);
+            statement.setString(5, searchInstructor);
+            if (Objects.isNull(searchDayOfWeek)) {
+                statement.setNull(6, Types.VARCHAR);
+            } else {
+                statement.setString(6, String.valueOf(searchDayOfWeek));
+            }
             if (searchClassTime == null) {
-                statement.setNull(++nowIndex, Types.SMALLINT);
+                statement.setNull(7, Types.SMALLINT);
             }
             else {
-                statement.setShort(++nowIndex, searchClassTime);
+                statement.setShort(7, searchClassTime);
             }
-            statement.setArray(++nowIndex, connection.createArrayOf("varchar", searchClassLocations == null ? null : searchClassLocations.toArray()));
-            statement.setString(++nowIndex, searchCourseType.name());
-            statement.setBoolean(++nowIndex, ignoreFull);
-            statement.setBoolean(++nowIndex, ignoreConflict);
-            statement.setBoolean(++nowIndex, ignorePassed);
-            statement.setBoolean(++nowIndex, ignoreMissingPrerequisites);
-            statement.setInt(++nowIndex, pageSize);
-            statement.setInt(++nowIndex, pageIndex);
+            statement.setArray(8, connection.createArrayOf("varchar", searchClassLocations == null ? null : searchClassLocations.toArray()));
+            statement.setString(9, searchCourseType.name());
+            statement.setBoolean(10, ignoreFull);
+            statement.setBoolean(11, ignoreConflict);
+            statement.setBoolean(12, ignorePassed);
+            statement.setBoolean(13, ignoreMissingPrerequisites);
+            statement.setInt(14, pageSize);
+            statement.setInt(15, pageIndex);
             ResultSet set = statement.executeQuery();
-            while (set.next()) {
-                System.out.println(set.getRow());
-                CourseSearchEntry entry = new CourseSearchEntry();
-                // 初始化entry.course
-                
-                // 初始化entry.section
-                // 建立sectionClasses
-                // 跳过conflictCourseNames
 
+            //(BIO102B,生命科学概论,3,48,HUNDRED_MARK_SCORE,
+            // 77,英文班,80,80,139,30000052,王小静,WEDNESDAY,
+            // "{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}",7,8,一教125电子系实验室,{})
+
+//            Pattern compile = Pattern.compile("\\((?<courseId>[^,]*),\"?(?<courseName>[^,]*?)\"?+,(?<credit>\\d*),(?<classHour>\\d*)," +
+//                    "(?<grading>[A-Z_]*),(?<sectionId>\\d*),\"?(?<sectionName>[^,]*?)\"?+," +
+//                    "(?<totalCapacity>\\d*),(?<leftCapacity>\\d*),(?<classId>\\d*)," +
+//                    "(?<instructorId>\\d*),\"?(?<instructorName>[^,]*?)\"?+,(?<dayOfWeek>[A-Z]*),\"\\{(?<weekList>.*)}\"," +
+//                    "(?<classStart>\\d*),(?<classEnd>\\d*),\"?(?<location>[^,]*?)\"?+,\"?\\{(?<conflicts>.*)}\"?");
+            while (set.next()) {
+//                String search_course = set.getString("search_course");
+//                Matcher matcher = compile.matcher(search_course);
+//                if (matcher.find()) {
+//                    String courseIdReg = matcher.group("courseId").replaceAll("X", "-");
+//                    String courseNameReg = matcher.group("courseName");
+//                    int creditReg = Integer.parseInt(matcher.group("credit"));
+//                    int classHourReg = Integer.parseInt(matcher.group("classHour"));
+//                    Course.CourseGrading gradingReg = Course.CourseGrading.valueOf(matcher.group("grading"));
+//                    int sectionIdReg = Integer.parseInt(matcher.group("sectionId"));
+//                    String sectionNameReg = matcher.group("sectionName");
+//                    int totalCapacityReg = Integer.parseInt(matcher.group("totalCapacity"));
+//                    int leftCapacityReg = Integer.parseInt(matcher.group("leftCapacity"));
+//                    int classId = Integer.parseInt(matcher.group("classId"));
+//                    int instructorIdReg = Integer.parseInt(matcher.group("instructorId"));
+//                    String instructorNameReg = matcher.group("instructorName");
+//                    DayOfWeek dayOfWeekReg = DayOfWeek.valueOf(matcher.group("dayOfWeek"));
+//                    Set<Short> weekListReg = Arrays.stream(matcher.group("weekList").split(",")).map(
+//                            i -> Short.parseShort(i)
+//                    ).collect(Collectors.toSet());
+//                    short classStartReg = Short.parseShort(matcher.group("classStart"));
+//                    short classEndReg = Short.parseShort(matcher.group("classEnd"));
+//                    String locationReg = matcher.group("location");
+//                    List<String> conflictsReg = Arrays.stream(matcher.group("conflicts").split(",")).filter(
+//                            r -> Objects.nonNull(r) && r.length() > 0
+//                    ).collect(Collectors.toList());
+
+
+//                    if (!fastEntry.containsKey(sectionIdReg)) {
+//                        if (nowPageIndex == pageSize) {
+//                            nowPageIndex = 0;
+//                            nowPage++;
+//                        }
+//                        nowPageIndex ++;
+//                        if (nowPage != pageIndex) {
+//                            fastEntry.put(sectionIdReg, null);
+//                            continue;
+//                        }
+//                    } else {
+//                        if (fastEntry.get(sectionIdReg) == null) {
+//                            continue;
+//                        }
+//                    }
+
+                int sectionIdReg = set.getInt("sectionId");
+                String courseIdReg = set.getString("courseId").replaceAll("X", "-");
+                String courseNameReg = set.getString("courseName");
+                int creditReg = set.getInt("credit");
+                int classHourReg = set.getInt("classHour");
+                Course.CourseGrading gradingReg = Course.CourseGrading.valueOf(set.getString("grading"));
+                String sectionNameReg = set.getString("sectionName");
+                int totalCapacityReg = set.getInt("totalCapacity");
+                int leftCapacityReg = set.getInt("leftCapacity");
+                String[] conflictsReg = (String[]) set.getArray("distinctName").getArray();
+                int classId = set.getInt("id");
+                int instructorIdReg = set.getInt("instructor");
+                String instructorNameReg = set.getString("fullname");
+                DayOfWeek dayOfWeekReg = DayOfWeek.valueOf(set.getString("dayOfWeek"));
+                Short[] weekListReg = ((Short[]) set.getArray("weekList").getArray());
+                short classStartReg = set.getShort("classStart");
+                short classEndReg = set.getShort("classEnd");
+                String locationReg = set.getString("location");
+
+
+
+                CourseSearchEntry entry;
+                if (fastEntry.containsKey(sectionIdReg)) {
+                    entry = fastEntry.get(sectionIdReg);
+                } else {
+                    entry = new CourseSearchEntry();
+                    fastEntry.put(sectionIdReg, entry);
+                    Course course = new Course();
+                    course.id = courseIdReg;
+                    course.name = courseNameReg;
+                    course.credit = creditReg;
+                    course.classHour = classHourReg;
+                    course.grading = gradingReg;
+                    entry.course = course;
+
+                    CourseSection section = new CourseSection();
+                    section.id = sectionIdReg;
+                    section.name = sectionNameReg;
+                    section.totalCapacity = totalCapacityReg;
+                    section.leftCapacity = leftCapacityReg;
+                    entry.section = section;
+                }
+                if (entry.conflictCourseNames == null) {
+                    entry.conflictCourseNames = new ArrayList<>();
+                }
+                List<String> strings = entry.conflictCourseNames;
+                for (String s : conflictsReg) {
+                    if (!strings.contains(s)) {
+                        strings.add(s);
+                    }
+                }
+                if (entry.sectionClasses == null) {
+                    entry.sectionClasses = new HashSet<>();
+                }
+                CourseSectionClass courseSectionClass = new CourseSectionClass();
+                courseSectionClass.id = classId;
+
+                Instructor instructor = new Instructor();
+                instructor.id = instructorIdReg;
+                instructor.fullName = instructorNameReg;
+                courseSectionClass.instructor = instructor;
+
+                courseSectionClass.dayOfWeek = dayOfWeekReg;
+                courseSectionClass.classBegin = classStartReg;
+                courseSectionClass.classEnd = classEndReg;
+                courseSectionClass.location = locationReg;
+                courseSectionClass.weekList = new HashSet<>(weekListReg.length);
+                for (Short aShort : weekListReg) {
+                    courseSectionClass.weekList.add(aShort);
+                }
+
+                entry.sectionClasses.add(courseSectionClass);
+                if (!searchEntries.contains(entry)) {
+                    searchEntries.add(entry);
+                }
             }
+
+            searchEntries.sort(new Comparator<CourseSearchEntry>() {
+                @Override
+                public int compare(CourseSearchEntry o1, CourseSearchEntry o2) {
+                    int i = o1.course.id.compareToIgnoreCase(o2.course.id);
+                    if (i != 0) return i;
+                    String o1full = o1.course.name + "[" + o1.section.name + "]";
+                    String o2full = o1.course.name + "[" + o2.section.name + "]";
+                    return o1full.compareTo(o2full);
+                }
+            });
+
         } catch (SQLException exception) {
             exception.printStackTrace();
         }
-        return List.of();
+        if (pageIndex * pageSize > searchEntries.size()) {
+            return List.of();
+        }
+        int lowIndex = pageIndex * pageSize;
+        int highIndex = Math.min(((pageIndex + 1) * pageSize), searchEntries.size());
+        for (int i = lowIndex; i < highIndex; i++) {
+            searchEntries.get(i).conflictCourseNames.sort(String::compareTo);
+        }
+        return searchEntries.subList(lowIndex, highIndex);
     }
 
 
@@ -211,7 +363,6 @@ public class StudentServiceImplementation implements StudentService {
      */
     @Override
     public EnrollResult enrollCourse(int studentId, int sectionId) {
-        countForEnrollCourse ++;
         try (Connection connection = SQLDataSource.getInstance().getSQLConnection();
              PreparedStatement executeStatement = connection.
                      prepareStatement("SELECT enroll_course(?, ?);")){
@@ -233,12 +384,8 @@ public class StudentServiceImplementation implements StudentService {
                 return EnrollResult.UNKNOWN_ERROR;
             }
         }
-        countSuccess++;
         return EnrollResult.SUCCESS;
     }
-
-    public volatile int countForEnrollCourse = 0;
-    public volatile int countSuccess = 0;
 
     /**
      * 退课
@@ -400,7 +547,6 @@ public class StudentServiceImplementation implements StudentService {
      * 测试能否获取一个字符串二维数组<br>
      * 测试结果：成功！
      */
-    @Test
     public void testTwoDimensionalVarchar() {
 
         try (Connection connection = SQLDataSource.getInstance().getSQLConnection()){
@@ -451,6 +597,33 @@ public class StudentServiceImplementation implements StudentService {
         for (String s : result) {
             System.out.println(s);
         }
+    }
+
+    public static void main(String[] args) {
+
+        String s = "(CS205,C/C++程序设计,3,64,HUNDRED_MARK_SCORE,12,英文班-实验1班（国际生）" +
+                ",50,50,168,30000017,\"Peter Pimpl\",WEDNESDAY,\"{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}\"," +
+                "1,2,一教303,\"{化学原理实验A[中英双语1班（缺课不补课，缺课当次成绩记为0分）],计算机程序设计基础A[中英双语1班-实验5班]}\")" +
+                "";
+
+        Pattern compile = Pattern.compile("\\((?<courseId>[^,]*),\"?(?<courseName>[^,]*?)\"?+,(?<credit>\\d*),(?<classHour>\\d*)," +
+                "(?<grading>[A-Z_]*),(?<sectionId>\\d*),\"?(?<sectionName>[^,]*?)\"?+," +
+                "(?<totalCapacity>\\d*),(?<leftCapacity>\\d*),(?<classId>\\d*)," +
+                "(?<instructorId>\\d*),\"?(?<instructorName>[^,]*?)\"?+,(?<dayOfWeek>[A-Z]*),\"\\{(?<weekList>.*)}\"," +
+                "(?<classStart>\\d*),(?<classEnd>\\d*),\"?(?<location>[^,]*?)\"?+,\\{(?<conflicts>.*)}\\)");
+
+        Matcher matcher = compile.matcher(s);
+        System.out.println(s);
+        System.out.println(matcher.find());
+
+        Pattern comp = Pattern.compile("\\((?<courseId>[^,]*),\"?(?<courseName>[^,]*?)\"?+,(?<credit>\\d*),(?<classHour>\\d*)," +
+                "(?<grading>[A-Z_]*),(?<sectionId>\\d*),\"?(?<sectionName>[^,]*?)\"?+," +
+                "(?<totalCapacity>\\d*),(?<leftCapacity>\\d*),(?<classId>\\d*)," +
+                "(?<instructorId>\\d*),\"?(?<instructorName>[^,]*?)\"?+,(?<dayOfWeek>[A-Z]*),\"\\{(?<weekList>.*)}\"," +
+                "(?<classStart>\\d*),(?<classEnd>\\d*),\"?(?<location>[^,]*?)\"?+,\"?\\{(?<conflicts>.*)}\"?");
+
+        Matcher matcher1 = comp.matcher(s);
+        System.out.println("\nmatcher = " + matcher1.find());
     }
 
 }

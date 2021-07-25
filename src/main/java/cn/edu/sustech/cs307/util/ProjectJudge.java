@@ -9,6 +9,7 @@ import cn.edu.sustech.cs307.dto.prerequisite.Prerequisite;
 import cn.edu.sustech.cs307.factory.ServiceFactory;
 import cn.edu.sustech.cs307.service.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
@@ -60,6 +61,35 @@ public final class ProjectJudge {
             result.elapsedTimeNs.addAndGet(System.nanoTime() - beforeTime);
             result.passCount.addAndGet(IntStream.range(0, searchCourseParams.size()).parallel()
                     .filter(it -> searchCourseExpected.get(it).equals(searchCourseResult.get(it))).count());
+            for (int i = 0; i < searchCourseParams.size(); i++) {
+                if (!searchCourseExpected.get(i).equals(searchCourseResult.get(i))){
+                    if (searchCourseExpected.get(i).size() != searchCourseResult.get(i).size())
+                    {
+                        System.out.println("Input: " + searchCourseParams.get(i));
+                        System.out.println("Expected: ");
+                        for (CourseSearchEntry entry : searchCourseExpected.get(i)) {
+                            System.out.println("\n" + entry);
+                        }
+                        System.out.println("Actual: ");
+                        for (CourseSearchEntry entry : searchCourseResult.get(i)) {
+                            System.out.println("\n" + entry);
+                        }
+                        System.out.println("------------\n\n");
+                    }
+                    else {
+                        for (int i1 = 0; i1 < searchCourseExpected.get(i).size(); i1++) {
+                            if (!searchCourseExpected.get(i).get(i1).equals(searchCourseResult.get(i).get(i1))) {
+                                System.out.println("Expected: " + searchCourseExpected.get(i).get(i1));
+                                System.out.println("\nActual: " + searchCourseResult.get(i).get(i1));
+                                System.out.println("\n-------------\n\n");
+                                System.out.println("In " + i + "\t" + i1 + "situation. ");
+                                System.out.println(searchCourseParams.get(i));
+                            }
+                        }
+                    }
+                    throw new RuntimeException();
+                }
+            }
         }
         return result;
     }
@@ -103,6 +133,16 @@ public final class ProjectJudge {
                 evalResult.elapsedTimeNs.addAndGet(System.nanoTime() - beforeTime);
                 if (expected == result) {
                     evalResult.passCount.incrementAndGet();
+                } else {
+                    System.err.println(
+                            String.format("Fail: expected %s, but get %s. \n" +
+                                    "Parameters studentId = %s, sectionId = %s\n\n",
+                                    expected,
+                                    result,
+                                    enrollCourseParams.get(i).get(0),
+                                    importer.mapSectionId(enrollCourseParams.get(i).get(1)))
+                    );
+                    throw new RuntimeException();
                 }
                 if (expected == StudentService.EnrollResult.SUCCESS) {
                     evalResult.succeedSections.add(enrollCourseParams.get(i));
@@ -294,10 +334,6 @@ public final class ProjectJudge {
         ProjectJudge judge = new ProjectJudge();
         judge.benchmark();
         StudentService service = Config.getServiceFactory().createService(StudentService.class);
-        if (service instanceof StudentServiceImplementation) {
-            System.out.println(((StudentServiceImplementation) service).countSuccess);
-            System.out.println(((StudentServiceImplementation) service).countForEnrollCourse);
-        }
     }
 
     private static <T> T readValueFromFile(File file, Class<T> tClass) {

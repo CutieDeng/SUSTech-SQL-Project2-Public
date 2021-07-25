@@ -96,4 +96,14 @@ public class CourseSearchEntry {
     public int hashCode() {
         return Objects.hash(course, section, sectionClasses, conflictCourseNames);
     }
+
+    @Override
+    public String toString() {
+        return "CourseSearchEntry{\n" +
+                "course=" + course +
+                ", section=" + section +
+                ", \nsectionClasses=" + sectionClasses +
+                ", \nconflictCourseNames=" + conflictCourseNames +
+                '}' + "\n";
+    }
 }
