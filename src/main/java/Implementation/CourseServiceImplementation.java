@@ -191,6 +191,8 @@ public class CourseServiceImplementation implements CourseService {
      * @param classEnd 当天课程结束的具体时间。
      * @param location 该课的授课地点。
      * @return 课时的 ID.
+     * @throws IntegrityViolationException 传入参数非法.
+     * @throws RuntimeException 未知的 BUG.
      */
     @Override
     public int addCourseSectionClass(int sectionId, int instructorId,
@@ -288,8 +290,7 @@ public class CourseServiceImplementation implements CourseService {
                 course.grading = Course.CourseGrading.valueOf(grading);
                 result.add(course);
             }
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+        } catch (SQLException ignored) {
         }
         if (result.isEmpty()) {
             return List.of();

@@ -189,58 +189,7 @@ public class StudentServiceImplementation implements StudentService {
             statement.setInt(15, pageIndex);
             ResultSet set = statement.executeQuery();
 
-            //(BIO102B,生命科学概论,3,48,HUNDRED_MARK_SCORE,
-            // 77,英文班,80,80,139,30000052,王小静,WEDNESDAY,
-            // "{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}",7,8,一教125电子系实验室,{})
-
-//            Pattern compile = Pattern.compile("\\((?<courseId>[^,]*),\"?(?<courseName>[^,]*?)\"?+,(?<credit>\\d*),(?<classHour>\\d*)," +
-//                    "(?<grading>[A-Z_]*),(?<sectionId>\\d*),\"?(?<sectionName>[^,]*?)\"?+," +
-//                    "(?<totalCapacity>\\d*),(?<leftCapacity>\\d*),(?<classId>\\d*)," +
-//                    "(?<instructorId>\\d*),\"?(?<instructorName>[^,]*?)\"?+,(?<dayOfWeek>[A-Z]*),\"\\{(?<weekList>.*)}\"," +
-//                    "(?<classStart>\\d*),(?<classEnd>\\d*),\"?(?<location>[^,]*?)\"?+,\"?\\{(?<conflicts>.*)}\"?");
             while (set.next()) {
-//                String search_course = set.getString("search_course");
-//                Matcher matcher = compile.matcher(search_course);
-//                if (matcher.find()) {
-//                    String courseIdReg = matcher.group("courseId").replaceAll("X", "-");
-//                    String courseNameReg = matcher.group("courseName");
-//                    int creditReg = Integer.parseInt(matcher.group("credit"));
-//                    int classHourReg = Integer.parseInt(matcher.group("classHour"));
-//                    Course.CourseGrading gradingReg = Course.CourseGrading.valueOf(matcher.group("grading"));
-//                    int sectionIdReg = Integer.parseInt(matcher.group("sectionId"));
-//                    String sectionNameReg = matcher.group("sectionName");
-//                    int totalCapacityReg = Integer.parseInt(matcher.group("totalCapacity"));
-//                    int leftCapacityReg = Integer.parseInt(matcher.group("leftCapacity"));
-//                    int classId = Integer.parseInt(matcher.group("classId"));
-//                    int instructorIdReg = Integer.parseInt(matcher.group("instructorId"));
-//                    String instructorNameReg = matcher.group("instructorName");
-//                    DayOfWeek dayOfWeekReg = DayOfWeek.valueOf(matcher.group("dayOfWeek"));
-//                    Set<Short> weekListReg = Arrays.stream(matcher.group("weekList").split(",")).map(
-//                            i -> Short.parseShort(i)
-//                    ).collect(Collectors.toSet());
-//                    short classStartReg = Short.parseShort(matcher.group("classStart"));
-//                    short classEndReg = Short.parseShort(matcher.group("classEnd"));
-//                    String locationReg = matcher.group("location");
-//                    List<String> conflictsReg = Arrays.stream(matcher.group("conflicts").split(",")).filter(
-//                            r -> Objects.nonNull(r) && r.length() > 0
-//                    ).collect(Collectors.toList());
-
-
-//                    if (!fastEntry.containsKey(sectionIdReg)) {
-//                        if (nowPageIndex == pageSize) {
-//                            nowPageIndex = 0;
-//                            nowPage++;
-//                        }
-//                        nowPageIndex ++;
-//                        if (nowPage != pageIndex) {
-//                            fastEntry.put(sectionIdReg, null);
-//                            continue;
-//                        }
-//                    } else {
-//                        if (fastEntry.get(sectionIdReg) == null) {
-//                            continue;
-//                        }
-//                    }
 
                 int sectionIdReg = set.getInt("sectionId");
                 String courseIdReg = set.getString("courseId").replaceAll("X", "-");
@@ -377,9 +326,9 @@ public class StudentServiceImplementation implements StudentService {
                     return EnrollResult.valueOf(enumName);
                 }
             } catch (IllegalArgumentException exception) {
-                System.out.println(studentId + "\tchoose\t" + sectionId);
-                System.out.println(exception.getMessage());
-                System.out.println("\n");
+//                System.out.println(studentId + "\tchoose\t" + sectionId);
+//                System.out.println(exception.getMessage());
+//                System.out.println("\n");
                 // 发生未知的错误，顺便打印相关的递归栈。
                 return EnrollResult.UNKNOWN_ERROR;
             }
@@ -526,7 +475,7 @@ public class StudentServiceImplementation implements StudentService {
                 }
             }
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+//            throwables.printStackTrace();
         }
         return courseTable;
     }
@@ -541,89 +490,6 @@ public class StudentServiceImplementation implements StudentService {
     private static int diffDay(Date begin, Date end) {
         long diff = ((end.getTime() - begin.getTime()) >>> 10) / 84375L;
         return (int) diff;
-    }
-
-    /**
-     * 测试能否获取一个字符串二维数组<br>
-     * 测试结果：成功！
-     */
-    public void testTwoDimensionalVarchar() {
-
-        try (Connection connection = SQLDataSource.getInstance().getSQLConnection()){
-            PreparedStatement statement = connection.prepareStatement(
-                    "SELECT ARRAY [" +
-                            "(SELECT ARRAY ['yyz', '是', '一', '个', '大', '笨', '蛋']), " +
-                            "(SELECT ARRAY ['Cutie', 'Deng', 'don''t', 'know', 'any', 'thing', 'qwq'])" +
-                            "]"
-            );
-            ResultSet set = statement.executeQuery();
-            if (set.next()) {
-                Array array = set.getArray("array");
-                Object array1 = array.getArray();
-                if (array1 instanceof String[][]) {
-                    System.out.println(Arrays.deepToString((Object[]) array1));
-                }
-            }
-        } catch (SQLException exception) {
-            exception.printStackTrace();
-        }
-    }
-
-    public static void parseForDigitLogic() {
-       Scanner input = new Scanner(System.in);
-       List<String> result = new ArrayList<>();
-       Pattern pattern = Pattern.compile("h\\d\\d\\d");
-       while (input.hasNextLine()) {
-           String nowString = input.nextLine();
-           if (nowString.length() == 0) {
-               break;
-           }
-           Matcher matcher = pattern.matcher(nowString);
-           int i = nowString.indexOf("***");
-           if (matcher.find()) {
-               String group = matcher.group();
-               if (group.matches("h00[1-9a-fA-F]")) {
-                   nowString = nowString.substring(0, i) + "001" + nowString.substring(i+3);
-               }
-               else if (group.matches("h0[1-9a-fA-F]0")) {
-                   nowString = nowString.substring(0, i) + "010" + nowString.substring(i+3);
-               } else if (group.matches("h[1-9a-fA-F]00")) {
-                   nowString = nowString.substring(0, i) + "100" + nowString.substring(i+3);
-               }
-               result.add(nowString);
-           }
-       }
-        System.out.println("\n");
-        for (String s : result) {
-            System.out.println(s);
-        }
-    }
-
-    public static void main(String[] args) {
-
-        String s = "(CS205,C/C++程序设计,3,64,HUNDRED_MARK_SCORE,12,英文班-实验1班（国际生）" +
-                ",50,50,168,30000017,\"Peter Pimpl\",WEDNESDAY,\"{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}\"," +
-                "1,2,一教303,\"{化学原理实验A[中英双语1班（缺课不补课，缺课当次成绩记为0分）],计算机程序设计基础A[中英双语1班-实验5班]}\")" +
-                "";
-
-        Pattern compile = Pattern.compile("\\((?<courseId>[^,]*),\"?(?<courseName>[^,]*?)\"?+,(?<credit>\\d*),(?<classHour>\\d*)," +
-                "(?<grading>[A-Z_]*),(?<sectionId>\\d*),\"?(?<sectionName>[^,]*?)\"?+," +
-                "(?<totalCapacity>\\d*),(?<leftCapacity>\\d*),(?<classId>\\d*)," +
-                "(?<instructorId>\\d*),\"?(?<instructorName>[^,]*?)\"?+,(?<dayOfWeek>[A-Z]*),\"\\{(?<weekList>.*)}\"," +
-                "(?<classStart>\\d*),(?<classEnd>\\d*),\"?(?<location>[^,]*?)\"?+,\\{(?<conflicts>.*)}\\)");
-
-        Matcher matcher = compile.matcher(s);
-        System.out.println(s);
-        System.out.println(matcher.find());
-
-        Pattern comp = Pattern.compile("\\((?<courseId>[^,]*),\"?(?<courseName>[^,]*?)\"?+,(?<credit>\\d*),(?<classHour>\\d*)," +
-                "(?<grading>[A-Z_]*),(?<sectionId>\\d*),\"?(?<sectionName>[^,]*?)\"?+," +
-                "(?<totalCapacity>\\d*),(?<leftCapacity>\\d*),(?<classId>\\d*)," +
-                "(?<instructorId>\\d*),\"?(?<instructorName>[^,]*?)\"?+,(?<dayOfWeek>[A-Z]*),\"\\{(?<weekList>.*)}\"," +
-                "(?<classStart>\\d*),(?<classEnd>\\d*),\"?(?<location>[^,]*?)\"?+,\"?\\{(?<conflicts>.*)}\"?");
-
-        Matcher matcher1 = comp.matcher(s);
-        System.out.println("\nmatcher = " + matcher1.find());
     }
 
 }
